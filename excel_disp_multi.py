@@ -1,18 +1,24 @@
 import argparse
+import glob
 import logging
+import os
 
 from funs import plot_db, db_gen, set_logging
 
 
 def run(args):
-    db = db_gen(args.path_in)
-    plot_db(db)
+    paths_in = glob.glob(os.path.join(args.dir_in, '*.xlsx'))
+
+    for path_in in paths_in:
+        logging.info(path_in)
+        db = db_gen(path_in)
+        plot_db(db)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR/TF1_20220801092906_101001_data_export_002.xlsx',
+    parser.add_argument('--dir_in',
+                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR/',
                         type=str)
     return parser.parse_args()
 

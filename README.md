@@ -1,0 +1,2 @@
+# smartSD
+smart smoke detector

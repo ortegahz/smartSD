@@ -26,11 +26,15 @@ def run(args):
     logging.info((nrows, ncols))
 
     keys = obj_sheet.row_values(0)[:-1]
+    keys.append('Alarm')
     logging.info(keys)
 
     db = dict()
     for i, key in enumerate(keys):
         db[key] = obj_sheet.col_values(i)[1:]
+
+    idx_alarm = db['Alarm'].index('Alarm!')
+    db['Alarm'] = [0] * idx_alarm + [255] * (len(db['Time']) - idx_alarm)
 
     plt.plot(np.array(db['Time']), np.array(db['Line']))
     plt.plot(np.array(db['Time']), np.array(db['Address']))
@@ -41,6 +45,7 @@ def run(args):
     plt.plot(np.array(db['Time']), np.array(db['ADC_Heat']))
     plt.plot(np.array(db['Time']), np.array(db['Smoke_Forward']))
     plt.plot(np.array(db['Time']), np.array(db['Smoke_Backward']))
+    plt.plot(np.array(db['Time']), np.array(db['Alarm']))
     plt.show()
 
 

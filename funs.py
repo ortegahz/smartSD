@@ -1,8 +1,16 @@
 import logging
+import os
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
 import xlrd
+
+
+def make_dirs(dir_root):
+    if os.path.exists(dir_root):
+        shutil.rmtree(dir_root)
+    os.makedirs(os.path.join(dir_root), exist_ok=True)
 
 
 def set_logging():

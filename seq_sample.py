@@ -20,29 +20,32 @@ def run(args):
         for path_src in paths_src:
             logging.info(path_src)
             db = db_gen(path_src)
-            feats = np.array(db['Smoke_Forward'.lower()]).astype(float)
-            status = np.array(db['Status'.lower()]).astype(float)
-            # logging.info(status)
-            # logging.info(np.nonzero(status))
-            key_idx = np.nonzero(status)[0][0] if len(np.nonzero(status)[0]) > 0 else len(status) / 2
-            # logging.info(key_idx)
-            seq_len = LEN_SEQ
-            idx_s = 0 if key_idx - seq_len * args.shift_rate_left < 0 else int(key_idx - seq_len * args.shift_rate_left)
-            idx_e = len(feats) if idx_s + seq_len > len(feats) else int(idx_s + seq_len)
-            seq_pick = feats[idx_s:idx_e]
-            db['Status'.lower()][idx_s] = 255
-            db['Status'.lower()][idx_e - 1] = 255
-            # plot_db(db, 5)
-            if len(seq_pick) < seq_len:
-                pad = [0] * (seq_len - len(seq_pick))
-                seq_pick = np.append(seq_pick, pad)
-            logging.info(seq_pick)
-            path_out = os.path.join(args.path_out)
-            with open(path_out, 'a') as f:
-                label = '+1' if 'pos' in subset else '-1'
-                f.write(label + ' ')
-                for i, feat in enumerate(seq_pick):
-                    f.write(f'{i + 1}:{feat} ')
+            idx_feat = 0
+            for key_choose in args.keys_choose:
+                feats = np.array(db[key_choose.lower()]).astype(float)
+                status = np.array(db['Status'.lower()]).astype(float)
+                # logging.info(status)
+                # logging.info(np.nonzero(status))
+                key_idx = np.nonzero(status)[0][0] if len(np.nonzero(status)[0]) > 0 else len(status) / 2
+                # logging.info(key_idx)
+                seq_len = LEN_SEQ
+                idx_s = 0 if key_idx - seq_len * args.shift_rate_left < 0 else int(key_idx - seq_len * args.shift_rate_left)
+                idx_e = len(feats) if idx_s + seq_len > len(feats) else int(idx_s + seq_len)
+                seq_pick = feats[idx_s:idx_e]
+                db['Status'.lower()][idx_s] = 255
+                db['Status'.lower()][idx_e - 1] = 255
+                # plot_db(db, 5)
+                if len(seq_pick) < seq_len:
+                    pad = [0] * (seq_len - len(seq_pick))
+                    seq_pick = np.append(seq_pick, pad)
+                logging.info(seq_pick)
+                with open(args.path_out, 'a') as f:
+                    label = '+1' if 'pos' in subset else '-1'
+                    f.write(label + ' ')
+                    for feat in seq_pick:
+                        f.write(f'{idx_feat + 1}:{feat} ')
+                        idx_feat += 1
+            with open(args.path_out, 'a') as f:
                 f.write('\n')
 
 
@@ -56,6 +59,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--subsets', default=['pos', 'neg'])
     parser.add_argument('--shift_rate_left', default=2 / 4)
+    parser.add_argument('--keys_choose', default=['Smoke_Forward'])
     return parser.parse_args()
 
 

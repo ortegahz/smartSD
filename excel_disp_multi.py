@@ -12,7 +12,7 @@ def run(args):
     for path_in in paths_in:
         logging.info(path_in)
         db = db_gen(path_in)
-        plot_db(db, 5)
+        plot_db(db, 1)
 
 
 def parse_args():

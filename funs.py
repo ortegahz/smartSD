@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xlrd
 
+LEN_SEQ = 128
 
 def make_dirs(dir_root):
     if os.path.exists(dir_root):
@@ -42,7 +43,7 @@ def db_gen(path_in):
     db = dict()
     db['fname'] = file_name
     for i, key in enumerate(keys):
-        db[key.lower()] = obj_sheet_pick.col_values(i)[1:]
+        db[key.lower()] = [0] * LEN_SEQ + obj_sheet_pick.col_values(i)[1:]
         # logging.info(obj_sheet_pick.col_values(i)[1:])
 
     # idx_alarm = db['Alarm'].index('Alarm!')
@@ -60,11 +61,11 @@ def plot_db(db, pause_time_s=1):
     # plt.plot(np.array(time_idxs), np.array(db['Address'.lower()]))
     plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]).astype(float), label='Status'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Loop'.lower()]))
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]).astype(float), label='ADC_Forward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]).astype(float), label='ADC_Backward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Heat'.lower()]).astype(float), label='ADC_Heat'.lower())
+    # plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]).astype(float), label='ADC_Forward'.lower())
+    # plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]).astype(float), label='ADC_Backward'.lower())
+    # plt.plot(np.array(time_idxs), np.array(db['ADC_Heat'.lower()]).astype(float), label='ADC_Heat'.lower())
     plt.plot(np.array(time_idxs), np.array(db['Smoke_Forward'.lower()]).astype(float), label='Smoke_Forward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
+    # plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Alarm'.lower()]))  # miss in some xlsx
     plt.legend()
     plt.title(db['fname'])

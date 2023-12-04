@@ -17,10 +17,13 @@ def run(args):
         file_name = os.path.basename(path_in)
         file_name_base, _ = file_name.split('.')
         case_name = file_name_base.split('_')[0]
+        case_name_sub = file_name_base.split('_')[1]
         logging.info(case_name)
 
-        if not case_name.isnumeric():
-            case_names_set.add(case_name)
+        if case_name == 'Vapor':
+            case_name = case_name + '_' + case_name_sub
+
+        case_names_set.add(case_name)
 
     logging.info(case_names_set)
 
@@ -32,11 +35,14 @@ def run(args):
         file_name = os.path.basename(path_in)
         file_name_base, _ = file_name.split('.')
         case_name = file_name_base.split('_')[0]
+        case_name_sub = file_name_base.split('_')[1]
 
-        if not case_name.isnumeric():
-            path_out = os.path.join(args.dir_out, case_name, file_name)
-            logging.info(path_out)
-            shutil.copy(path_in, path_out)
+        if case_name == 'Vapor':
+            case_name = case_name + '_' + case_name_sub
+
+        path_out = os.path.join(args.dir_out, case_name, file_name)
+        logging.info(path_out)
+        shutil.copy(path_in, path_out)
 
 
 def parse_args():

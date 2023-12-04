@@ -19,6 +19,7 @@ def set_logging():
 
 
 def db_gen(path_in):
+    file_name = os.path.basename(path_in)
     obj_xlrd = xlrd.open_workbook(path_in)
     logging.info(obj_xlrd)
 
@@ -39,6 +40,7 @@ def db_gen(path_in):
     logging.info(keys)
 
     db = dict()
+    db['fname'] = file_name
     for i, key in enumerate(keys):
         db[key.lower()] = obj_sheet_pick.col_values(i)[1:]
 
@@ -64,6 +66,7 @@ def plot_db(db, pause_time_s=1):
     plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]), label='Smoke_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Alarm'.lower()]))  # miss in some xlsx
     plt.legend()
+    plt.title(db['fname'])
     plt.show()
     plt.pause(pause_time_s)
     plt.clf()

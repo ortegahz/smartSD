@@ -12,13 +12,13 @@ def run(args):
     for path_in in paths_in:
         logging.info(path_in)
         db = db_gen(path_in)
-        plot_db(db)
+        plot_db(db, 1)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR/',
+                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_TFS/pos',
                         type=str)
     return parser.parse_args()
 

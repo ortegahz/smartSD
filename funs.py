@@ -43,6 +43,7 @@ def db_gen(path_in):
     db['fname'] = file_name
     for i, key in enumerate(keys):
         db[key.lower()] = obj_sheet_pick.col_values(i)[1:]
+        # logging.info(obj_sheet_pick.col_values(i)[1:])
 
     # idx_alarm = db['Alarm'].index('Alarm!')
     # logging.info(idx_alarm)
@@ -57,13 +58,13 @@ def plot_db(db, pause_time_s=1):
     plt.ion()
     # plt.plot(np.array(time_idxs), np.array(db['Line'.lower()]))
     # plt.plot(np.array(time_idxs), np.array(db['Address'.lower()]))
-    plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]), label='Status'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]).astype(float), label='Status'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Loop'.lower()]))
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]), label='ADC_Forward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]), label='ADC_Backward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['ADC_Heat'.lower()]), label='ADC_Heat'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['Smoke_Forward'.lower()]), label='Smoke_Forward'.lower())
-    plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]), label='Smoke_Backward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]).astype(float), label='ADC_Forward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]).astype(float), label='ADC_Backward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['ADC_Heat'.lower()]).astype(float), label='ADC_Heat'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['Smoke_Forward'.lower()]).astype(float), label='Smoke_Forward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Alarm'.lower()]))  # miss in some xlsx
     plt.legend()
     plt.title(db['fname'])

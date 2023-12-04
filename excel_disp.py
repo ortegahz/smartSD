@@ -6,13 +6,13 @@ from funs import plot_db, db_gen, set_logging
 
 def run(args):
     db = db_gen(args.path_in)
-    plot_db(db)
+    plot_db(db, 100)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR/TF1_20220801092906_101001_data_export_002.xlsx',
+                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_TFS/neg/Hot_SOCTA_2022-08-10-1_1.xlsx',
                         type=str)
     return parser.parse_args()
 

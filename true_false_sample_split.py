@@ -25,6 +25,8 @@ def run(args):
         case_name = case_name.lower()
         for path_src in paths_src:
             file_name = os.path.basename(path_src)
+            if 'spray' in case_name:
+                continue  # skip hard case
             if 'tf' in case_name or 'incense' in case_name or 'spray' in case_name:
                 path_dst = os.path.join(dir_root_pos, file_name)
             else:

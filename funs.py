@@ -22,23 +22,23 @@ def set_logging():
 def db_gen(path_in):
     file_name = os.path.basename(path_in)
     obj_xlrd = xlrd.open_workbook(path_in)
-    logging.info(obj_xlrd)
+    # logging.info(obj_xlrd)
 
     sheet_names = obj_xlrd.sheet_names()
-    logging.info(sheet_names)
+    # logging.info(sheet_names)
 
     obj_sheet_pick = None
     for sheet_name in sheet_names:
         obj_sheet = obj_xlrd.sheet_by_name(sheet_name)
-        logging.info(obj_sheet)
+        # logging.info(obj_sheet)
         nrows = obj_sheet.nrows
         ncols = obj_sheet.ncols
-        logging.info((nrows, ncols))
+        # logging.info((nrows, ncols))
         if nrows * ncols > 0:
             obj_sheet_pick = obj_sheet
 
     keys = obj_sheet_pick.row_values(0)
-    logging.info(keys)
+    # logging.info(keys)
 
     db = dict()
     db['fname'] = file_name
@@ -53,7 +53,7 @@ def db_gen(path_in):
     return db
 
 
-def plot_db(db, pause_time_s=1):
+def plot_db(db, pause_time_s=1, dir_save='', idx_save=0):
     time_idxs = range(len(db['Time'.lower()]))
 
     plt.ion()
@@ -61,14 +61,17 @@ def plot_db(db, pause_time_s=1):
     # plt.plot(np.array(time_idxs), np.array(db['Address'.lower()]))
     plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]).astype(float), label='Status'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Loop'.lower()]))
-    # plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]).astype(float), label='ADC_Forward'.lower())
-    # plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]).astype(float), label='ADC_Backward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['ADC_Forward'.lower()]).astype(float), label='ADC_Forward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['ADC_Backward'.lower()]).astype(float), label='ADC_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['ADC_Heat'.lower()]).astype(float), label='ADC_Heat'.lower())
     plt.plot(np.array(time_idxs), np.array(db['Smoke_Forward'.lower()]).astype(float), label='Smoke_Forward'.lower())
-    # plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
+    plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Alarm'.lower()]))  # miss in some xlsx
     plt.legend()
     plt.title(db['fname'])
     plt.show()
+    if not dir_save == '':
+        fn_base, _ = os.path.basename(db['fname']).split('.')
+        plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
     plt.pause(pause_time_s)
     plt.clf()

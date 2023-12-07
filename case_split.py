@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from funs import set_logging, make_dirs
+from utils import set_logging, make_dirs
 
 
 def run(args):

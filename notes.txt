@@ -1,0 +1,6 @@
+# nfs
+mount -t nfs 172.20.20.14:/home/manu/nfs /mnt/manu -o nolock
+
+# ssh
+ssh -p 22 root@172.20.20.96
+QNXFzhyh@JBUFA666

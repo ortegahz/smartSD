@@ -8,6 +8,7 @@ import xlrd
 
 LEN_SEQ = 128
 
+
 def make_dirs(dir_root):
     if os.path.exists(dir_root):
         shutil.rmtree(dir_root)

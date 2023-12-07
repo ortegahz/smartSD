@@ -1,18 +1,8 @@
 import argparse
-import glob
 import logging
-import os
 
-from utils import plot_db, db_gen, set_logging
-
-
-def run(args):
-    paths_in = glob.glob(os.path.join(args.dir_in, '*.xlsx'))
-
-    for path_in in paths_in:
-        logging.info(path_in)
-        db = db_gen(path_in)
-        plot_db(db, 1)
+from smoke_detector import SmokeDetector
+from utils import set_logging
 
 
 def parse_args():
@@ -27,7 +17,8 @@ def main():
     set_logging()
     args = parse_args()
     logging.info(args)
-    run(args)
+    smoke_detector = SmokeDetector()
+    logging.info(smoke_detector)
 
 
 if __name__ == '__main__':

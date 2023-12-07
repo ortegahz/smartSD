@@ -5,7 +5,7 @@ import os
 
 import numpy as np
 
-from funs import set_logging, db_gen, plot_db, LEN_SEQ, make_dirs
+from utils import set_logging, db_gen, plot_db, LEN_SEQ, make_dirs
 
 
 def run(args):

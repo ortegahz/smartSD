@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from funs import plot_db, db_gen, set_logging
+from utils import plot_db, db_gen, set_logging
 
 
 def run(args):

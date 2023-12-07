@@ -20,7 +20,6 @@ def main():
     args = parse_args()
     logging.info(args)
     smoke_detector = SmokeDetector()
-    logging.info(smoke_detector)
 
     paths_txt = glob.glob(os.path.join(args.dir_in, '*.txt'))
     smoke_detector.update_db(paths_txt)

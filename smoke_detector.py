@@ -1,16 +1,22 @@
 import logging
 import os
 
+from utils import LEN_SEQ
 
 class SensorDB:
-    def __init__(self):
-        self.time_cur = [20231207, 0, 0, 0]  # date hour minute second
-        self.seq_forward = []
-        self.seq_backward = []
+    def __init__(self, second_total):
+        self.seq_forward = list()
+        self.seq_backward = list()
+        self.last_second_total = second_total
 
-    def update(self, cur_forward, cur_backward):
-        self.seq_forward.append(cur_forward)
-        self.seq_backward.append(cur_backward)
+    def update(self, second_total, cur_forward, cur_backward):
+        self.last_second_total = second_total
+        self.seq_forward.extend(cur_forward)
+        self.seq_backward.extend(cur_backward)
+
+    def balance(self):
+        self.seq_forward = self.seq_forward[-LEN_SEQ:]
+        self.seq_backward = self.seq_backward[-LEN_SEQ:]
 
     def show(self):
         logging.info(('seq_forward', self.seq_forward))
@@ -20,6 +26,7 @@ class SensorDB:
 class SmokeDetector:
     def __init__(self):
         self.db = dict()
+        self.interval = 3
 
     def infer(self):
         pass
@@ -33,14 +40,33 @@ class SmokeDetector:
             group_id, date = group_id[-1], int(date)
             if not date == 20231207 or not group_id == '1' or not sensor_id == '1':
                 continue
-            hour, minute, second = time.split(':')
-            hour, minute, second = int(hour), int(minute), int(second)
-            second_total = hour * 60 * 60 + minute * 60 + second
-            logging.info((group_id, sensor_id, date, hour, minute, second, second_total))
+            # hour, minute, second = time.split(':')
+            # hour, minute, second = int(hour), int(minute), int(second)
+            # second_total = hour * 60 * 60 + minute * 60 + second
+            # logging.info((group_id, sensor_id, date, hour, minute, second, second_total))
             db_key = group_id + '_' + sensor_id
-            if db_key not in self.db.keys():
-                self.db[db_key] = SensorDB()
-            self.db[db_key].update(0, 0)
+            with open(path_txt_sorted) as f:
+                lines = f.readlines()
+            for line in lines:
+                logging.info(line)
+                val_forward, val_backward = int(line.split(' ')[-3], 16), int(line.split(' ')[-1], 16)
+                date, time = line.split(' ')[-8], line.split(' ')[-7]
+                # year, month, day = date.split('-')
+                hour, minute, second = time.split(':')
+                hour, minute, second = int(hour), int(minute), int(second)
+                second_total = hour * 60 * 60 + minute * 60 + second
+                logging.info((hour, minute, second, second_total, val_forward, val_backward))
+                if db_key not in self.db.keys():
+                    self.db[db_key] = SensorDB(second_total)
+                elif second_total - self.db[db_key].last_second_total > LEN_SEQ:
+                    self.db.pop(db_key)
+                    self.db[db_key] = SensorDB(second_total)
+                elif second_total - self.db[db_key].last_second_total > self.interval:
+                    seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
+                    self.db[db_key].update(second_total, seq_pad, seq_pad)
+                self.db[db_key].update(second_total, [val_forward], [val_backward])
+                self.db[db_key].balance()
+                # self.show_db()
 
     def show_db(self):
         for key in self.db.keys():

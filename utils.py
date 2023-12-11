@@ -7,6 +7,8 @@ import numpy as np
 import xlrd
 
 LEN_SEQ = 128
+MAX_SEQ = 1024
+SENSOR_ID = 1
 
 
 def make_dirs(dir_root):
@@ -54,7 +56,7 @@ def db_gen(path_in):
     return db
 
 
-def plot_db(db, pause_time_s=1, dir_save='', idx_save=0):
+def plot_db(db, pause_time_s=1, label='', dir_save='', idx_save=0):
     time_idxs = range(len(db['Time'.lower()]))
 
     plt.ion()
@@ -69,7 +71,7 @@ def plot_db(db, pause_time_s=1, dir_save='', idx_save=0):
     plt.plot(np.array(time_idxs), np.array(db['Smoke_Backward'.lower()]).astype(float), label='Smoke_Backward'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Alarm'.lower()]))  # miss in some xlsx
     plt.legend()
-    plt.title(db['fname'])
+    plt.title(db['fname'] + f' <{label}>')
     plt.show()
     if not dir_save == '':
         fn_base, _ = os.path.basename(db['fname']).split('.')

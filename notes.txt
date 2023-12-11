@@ -5,5 +5,11 @@ mount -t nfs 172.20.20.14:/home/manu/nfs /mnt/manu -o nolock
 ssh -p 22 root@172.20.20.96
 QNXFzhyh@JBUFA666
 
+ssh -p 22 nvidia@172.20.20.54
+nvidia
+
 # env
 export PATH=/home/manu/nfs/ai_demo/tools/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin:$PATH
+
+# build
+./build.sh arm

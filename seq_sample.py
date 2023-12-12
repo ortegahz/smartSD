@@ -5,7 +5,7 @@ import os
 
 import numpy as np
 
-from utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process
+from utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process, update_svm_label_file
 
 
 def run(args):
@@ -22,7 +22,6 @@ def run(args):
             logging.info((path_src, idx_save))
             db = db_gen(path_src)
             status = np.array(db['Status'.lower()]).astype(float)
-            idx_feat = 0
             feats = np.array(db[args.key_choose.lower()]).astype(float)
             # key_idx = np.nonzero(status)[0][0] if len(np.nonzero(status)[0]) > 0 else len(status) / 2
             key_idx = find_key_idx(feats)
@@ -32,14 +31,7 @@ def run(args):
                 continue
             seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db)
             # logging.info((idx_save, np.max(seq_pick)))
-            with open(args.path_out, 'a') as f:
-                label = '+1' if 'pos' in subset else '-1'
-                f.write(label + ' ')
-                for feat in seq_pick:
-                    f.write(f'{idx_feat + 1}:{feat} ')
-                    idx_feat += 1
-            with open(args.path_out, 'a') as f:
-                f.write('\n')
+            update_svm_label_file(seq_pick, args.path_out, subset)
             if args.save_plot:
                 plot_db(db, 0.1, subset, args.dir_plot_save, idx_save)
             idx_save += 1

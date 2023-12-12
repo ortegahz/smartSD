@@ -12,6 +12,18 @@ MAX_SEQ = 4096 * 64
 SENSOR_ID = 1
 
 
+def update_svm_label_file(seq_pick, path_out, subset='neg'):
+    idx_feat = 0
+    with open(path_out, 'a') as f:
+        label = '+1' if 'pos' in subset else '-1'
+        f.write(label + ' ')
+        for feat in seq_pick:
+            f.write(f'{idx_feat + 1}:{feat} ')
+            idx_feat += 1
+    with open(path_out, 'a') as f:
+        f.write('\n')
+
+
 def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None):
     seq_len = LEN_SEQ
     idx_s = 0 if key_idx - seq_len * shift_rate_left < 0 else int(
@@ -25,6 +37,7 @@ def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None):
     if len(seq_pick) < seq_len:
         pad = [seq_pick[-1]] * (seq_len - len(seq_pick))  # pad last seq val
         seq_pick = np.append(seq_pick, pad)
+    assert len(seq_pick) == LEN_SEQ
     return seq_pick, idx_s, idx_e
 
 

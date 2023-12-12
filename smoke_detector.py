@@ -1,10 +1,11 @@
 import logging
 import os
+from subprocess import *
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import MAX_SEQ, SENSOR_ID, find_key_idx, seq_pick_process, LEN_SEQ
+from utils import MAX_SEQ, SENSOR_ID, find_key_idx, seq_pick_process, update_svm_label_file
 
 
 class SensorDB:
@@ -44,25 +45,48 @@ class SmokeDetector:
         self.db = dict()
         self.interval = 3
 
+    @staticmethod
+    def svm_infer(seq, path_label='/home/manu/tmp/rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
+        svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
+        svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
+        range_file = os.path.join(dir_libsvm, 'tools', 'smartsd.range')
+        model_file = os.path.join(dir_libsvm, 'tools', 'smartsd.model')
+        test_pathname = path_label
+        scaled_test_file = path_label + '.scale'
+        predict_test_file = path_label + '.predict'
+        os.remove(path_label)
+        update_svm_label_file(seq, path_label)
+        cmd = '{0} -l 0 -u 1 -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
+        Popen(cmd, shell=True, stdout=PIPE).communicate()
+        cmd = '{0} -b 1 "{1}" "{2}" "{3}"'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
+        Popen(cmd, shell=True).communicate()
+        with open(predict_test_file) as f:
+            lines = f.readlines()
+        return int(lines[1].split(' ')[0])
+
     def infer_db(self, key):
         sensor_db = self.db[key]
         while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
-            seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
+            # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
             seq_forward = np.array(seq_forward).astype(float)
-            seq_state = np.array(seq_state).astype(float)
+            # seq_state = np.array(seq_state).astype(float)
             key_idx = find_key_idx(seq_forward)
             if key_idx < 0:
                 sensor_db.cur_state_idx = sensor_db.get_seq_len()
                 break
             seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-            assert len(seq_pick) == LEN_SEQ
-            # TODO: svm predict
-            sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
-            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
+            res = self.svm_infer(seq_pick)
+            if res > 0:
+                _seq_state = np.array(sensor_db.seq_state)
+                _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
+                sensor_db.seq_state = list(_seq_state)
+            # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
+            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
             sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
 
-    def value_preprocess(self, val, th=255, scale=1/32):
+    @staticmethod
+    def value_preprocess(val, th=255, scale=1 / 32):
         val *= scale
         val = th if val > th else val
         return val

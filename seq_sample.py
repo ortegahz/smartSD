@@ -5,28 +5,7 @@ import os
 
 import numpy as np
 
-from utils import set_logging, db_gen, plot_db, LEN_SEQ, make_dirs
-
-
-def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
-    cnt = 0
-    key_idx = -1
-    for i, val in enumerate(seq):
-        cnt = cnt + 1 if val > th_val else 0
-        if cnt > th_cnt:
-            key_idx = i
-            break
-    if key_idx == -1:
-        return key_idx
-    mean = 0.
-    while key_idx + int(LEN_SEQ / 2) <= len(seq):
-        idx_end = key_idx + int(LEN_SEQ / 2)
-        mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
-        if mean > th_mean or seq[idx_end] > 220:
-            break
-        key_idx += int(LEN_SEQ / 2)
-    logging.info(f'mean --> {mean}')
-    return key_idx
+from utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process
 
 
 def run(args):
@@ -51,17 +30,7 @@ def run(args):
                 assert key_idx > 0
             if subset == 'neg' and key_idx < 0:
                 continue
-            seq_len = LEN_SEQ
-            idx_s = 0 if key_idx - seq_len * args.shift_rate_left < 0 else int(
-                key_idx - seq_len * args.shift_rate_left)
-            idx_e = len(status) if idx_s + seq_len > len(status) else int(idx_s + seq_len)
-            db['Status'.lower()][int(key_idx)] = 100
-            db['Status'.lower()][idx_s] = 255
-            db['Status'.lower()][idx_e - 1] = 255
-            seq_pick = feats[idx_s:idx_e]
-            if len(seq_pick) < seq_len:
-                pad = [seq_pick[-1]] * (seq_len - len(seq_pick))  # pad last seq val
-                seq_pick = np.append(seq_pick, pad)
+            seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db)
             # logging.info((idx_save, np.max(seq_pick)))
             with open(args.path_out, 'a') as f:
                 label = '+1' if 'pos' in subset else '-1'
@@ -85,7 +54,6 @@ def parse_args():
                         default='/home/manu/tmp/smartsd',
                         type=str)
     parser.add_argument('--subsets', default=['pos', 'neg'])
-    parser.add_argument('--shift_rate_left', default=1 / 2)
     parser.add_argument('--key_choose', default='ADC_Forward')
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/smartsd_plot')
     parser.add_argument('--save_plot', default=True)

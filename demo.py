@@ -56,8 +56,8 @@ def main():
         smoke_detector.update_db(paths_txt_sorted)
         paths_txt_sorted_pick = paths_txt_sorted[:-10]
         paths_move(paths_txt_sorted_pick, args.dir_out)
-        # paths_copy([paths_txt_sorted[-1]], args.dir_out)
-        smoke_detector.print_db()
+        smoke_detector.infer_db(f'1_{SENSOR_ID}')
+        # smoke_detector.print_db()
         smoke_detector.plot_db(f'1_{SENSOR_ID}', pause_time_s=2048)
         break
 

@@ -4,29 +4,34 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import MAX_SEQ, SENSOR_ID
+from utils import MAX_SEQ, SENSOR_ID, find_key_idx, seq_pick_process, LEN_SEQ
 
 
 class SensorDB:
     def __init__(self, second_total):
+        self.seq_state = list()
         self.seq_forward = list()
         self.seq_backward = list()
         self.last_second_total = second_total
+        self.cur_state_idx = 0
 
-    def update(self, second_total, cur_forward, cur_backward):
+    def update(self, second_total, cur_forward, cur_backward, cur_state):
         self.last_second_total = second_total
+        self.seq_state.extend(cur_state)
         self.seq_forward.extend(cur_forward)
         self.seq_backward.extend(cur_backward)
 
     def balance(self):
+        self.seq_state = self.seq_state[-MAX_SEQ:]
         self.seq_forward = self.seq_forward[-MAX_SEQ:]
         self.seq_backward = self.seq_backward[-MAX_SEQ:]
 
     def get_seq_len(self):
-        assert len(self.seq_forward) == len(self.seq_backward)
+        assert len(self.seq_forward) == len(self.seq_backward) and len(self.seq_state) == len(self.seq_backward)
         return len(self.seq_forward)
 
     def print_db(self):
+        logging.info(('seq_state', self.seq_state))
         logging.info(('seq_forward', self.seq_forward))
         logging.info(('seq_backward', self.seq_backward))
         # logging.info(('seq_forward_reversed', list(reversed(self.seq_forward))))
@@ -39,8 +44,28 @@ class SmokeDetector:
         self.db = dict()
         self.interval = 3
 
-    def infer(self):
-        pass
+    def infer_db(self, key):
+        sensor_db = self.db[key]
+        while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
+            seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
+            seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
+            seq_forward = np.array(seq_forward).astype(float)
+            seq_state = np.array(seq_state).astype(float)
+            key_idx = find_key_idx(seq_forward)
+            if key_idx < 0:
+                sensor_db.cur_state_idx = sensor_db.get_seq_len()
+                break
+            seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
+            assert len(seq_pick) == LEN_SEQ
+            # TODO: svm predict
+            sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
+            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
+            sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
+
+    def value_preprocess(self, val, th=255, scale=1/32):
+        val *= scale
+        val = th if val > th else val
+        return val
 
     def update_db(self, paths_txt_sorted):
         # paths_txt_sorted = sorted(paths_txt, key=self._cmp)
@@ -76,8 +101,9 @@ class SmokeDetector:
                     continue
                 elif second_total - self.db[db_key].last_second_total > self.interval:
                     seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
-                    self.db[db_key].update(second_total, seq_pad, seq_pad)
-                self.db[db_key].update(second_total, [val_forward], [val_backward])
+                    self.db[db_key].update(second_total, seq_pad, seq_pad, seq_pad)
+                val_forward, val_backward = self.value_preprocess(val_forward), self.value_preprocess(val_backward)
+                self.db[db_key].update(second_total, [val_forward], [val_backward], [0])
                 self.db[db_key].balance()
 
     def print_db(self):
@@ -92,6 +118,7 @@ class SmokeDetector:
         plt.ion()
         plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward).astype(float), label='seq_forward'.lower())
         plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward).astype(float), label='seq_backward'.lower())
+        plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state'.lower())
         plt.legend()
         plt.title(key)
         plt.show()

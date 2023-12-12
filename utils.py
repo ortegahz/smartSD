@@ -8,8 +8,45 @@ import xlrd
 
 LEN_SEQ = 32
 LEN_OVERLAP = 16
-MAX_SEQ = 4096
+MAX_SEQ = 4096 * 64
 SENSOR_ID = 1
+
+
+def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None):
+    seq_len = LEN_SEQ
+    idx_s = 0 if key_idx - seq_len * shift_rate_left < 0 else int(
+        key_idx - seq_len * shift_rate_left)
+    idx_e = len(feats) if idx_s + seq_len > len(feats) else int(idx_s + seq_len)
+    if db is not None:
+        db['Status'.lower()][int(key_idx)] = 100
+        db['Status'.lower()][idx_s] = 255
+        db['Status'.lower()][idx_e - 1] = 255
+    seq_pick = feats[idx_s:idx_e]
+    if len(seq_pick) < seq_len:
+        pad = [seq_pick[-1]] * (seq_len - len(seq_pick))  # pad last seq val
+        seq_pick = np.append(seq_pick, pad)
+    return seq_pick, idx_s, idx_e
+
+
+def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
+    cnt = 0
+    key_idx = -1
+    for i, val in enumerate(seq):
+        cnt = cnt + 1 if val > th_val else 0
+        if cnt > th_cnt:
+            key_idx = i
+            break
+    if key_idx == -1:
+        return key_idx
+    mean = 0.
+    while key_idx + int(LEN_SEQ / 2) <= len(seq):
+        idx_end = key_idx + int(LEN_SEQ / 2)
+        mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
+        if mean > th_mean or seq[idx_end] > 220:
+            break
+        key_idx += int(LEN_SEQ / 2)
+    # logging.info(f'mean --> {mean}')
+    return key_idx
 
 
 def make_dirs(dir_root):

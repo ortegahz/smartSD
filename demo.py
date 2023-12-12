@@ -58,7 +58,8 @@ def main():
         paths_move(paths_txt_sorted_pick, args.dir_out)
         # paths_copy([paths_txt_sorted[-1]], args.dir_out)
         smoke_detector.print_db()
-        smoke_detector.plot_db(f'1_{SENSOR_ID}')
+        smoke_detector.plot_db(f'1_{SENSOR_ID}', pause_time_s=2048)
+        break
 
 
 if __name__ == '__main__':

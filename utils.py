@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xlrd
 
-LEN_SEQ = 128
-MAX_SEQ = 1024
+LEN_SEQ = 32
+LEN_OVERLAP = 16
+MAX_SEQ = 4096
 SENSOR_ID = 1
 
 

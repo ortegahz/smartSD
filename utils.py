@@ -124,7 +124,8 @@ def db_gen_v1(path_in):
                 db_key = 'temperature'
             if key == '时间戳':
                 db_key = 'timestamp'
-            raw_data_array = np.array(obj_sheet_pick.col_values(i)[1:])
+                continue
+            raw_data_array = np.array(obj_sheet_pick.col_values(i)[1:]).astype(float)
             if key == key_addr:
                 db[db_key.lower()] = np.concatenate((np.array([addr] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
             else:
@@ -167,8 +168,7 @@ def db_gen(path_in):
 
     return db
 
-
-def plot_db_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
+def plot_dbs_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     for db in dbs:
         time_idxs = range(len(db['addr'.lower()]))
@@ -185,6 +185,22 @@ def plot_db_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
             plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
         plt.pause(pause_time_s)
         plt.clf()
+
+def plot_db_v1(db, pause_time_s=1, case='', dir_save='', idx_save=0):
+    plt.ion()
+    time_idxs = range(len(db['addr'.lower()]))
+    plt.title(db['fname'] + f' <{case}>')
+    for key in db.keys():
+        if key == 'fname' or key == 'timestamp' or key == 'co' or key == 'dark':
+            continue
+        plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
+        plt.legend()
+    plt.show()
+    if not dir_save == '':
+        fn_base, _ = os.path.basename(db['fname']).split('.')
+        plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
+    plt.pause(pause_time_s)
+    plt.clf()
 
 
 def plot_db(db, pause_time_s=1, label='', dir_save='', idx_save=0):

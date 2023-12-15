@@ -40,10 +40,10 @@ def run(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_TFS',
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS',
                         type=str)
     parser.add_argument('--path_out',
-                        default='/home/manu/tmp/smartsd',
+                        default='/home/manu/tmp/smartsd_v0',
                         type=str)
     parser.add_argument('--subsets', default=['pos', 'neg'])
     parser.add_argument('--key_choose', default='ADC_Forward')

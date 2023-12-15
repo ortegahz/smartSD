@@ -24,15 +24,15 @@ def update_svm_label_file(seq_pick, path_out, subset='neg'):
         f.write('\n')
 
 
-def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None):
+def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None, key_debug='Status'):
     seq_len = LEN_SEQ
     idx_s = 0 if key_idx - seq_len * shift_rate_left < 0 else int(
         key_idx - seq_len * shift_rate_left)
     idx_e = len(feats) if idx_s + seq_len > len(feats) else int(idx_s + seq_len)
     if db is not None:
-        db['Status'.lower()][int(key_idx)] = 100
-        db['Status'.lower()][idx_s] = 255
-        db['Status'.lower()][idx_e - 1] = 255
+        db[key_debug.lower()][int(key_idx)] = 100
+        db[key_debug.lower()][idx_s] = 255
+        db[key_debug.lower()][idx_e - 1] = 255
     seq_pick = feats[idx_s:idx_e]
     if len(seq_pick) < seq_len:
         pad = [seq_pick[-1]] * (seq_len - len(seq_pick))  # pad last seq val
@@ -109,11 +109,26 @@ def db_gen_v1(path_in):
         raw_data_addr_array = np.array(obj_sheet_pick.col_values(idx_addr)[1:])
         data_mask = raw_data_addr_array == addr
         for i, key in enumerate(keys):
+            db_key = key
+            if key == '部件地址':
+                db_key = 'addr'
+            if key == '状态':
+                db_key = 'state'
+            if key == '暗电流':
+                db_key = 'dark'
+            if key == '前向电流':
+                db_key = 'forward'
+            if key == '后向电流':
+                db_key = 'backward'
+            if key == '温度':
+                db_key = 'temperature'
+            if key == '时间戳':
+                db_key = 'timestamp'
             raw_data_array = np.array(obj_sheet_pick.col_values(i)[1:])
             if key == key_addr:
-                db[key.lower()] = np.concatenate((np.array([addr] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
+                db[db_key.lower()] = np.concatenate((np.array([addr] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
             else:
-                db[key.lower()] = np.concatenate((np.array([0] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
+                db[db_key.lower()] = np.concatenate((np.array([0] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
         dbs.append(db)
 
     return dbs
@@ -156,25 +171,13 @@ def db_gen(path_in):
 def plot_db_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     for db in dbs:
-        time_idxs = range(len(db['部件地址'.lower()]))
+        time_idxs = range(len(db['addr'.lower()]))
         plt.title(db['fname'] + f' <{case}>')
         for key in db.keys():
             label = key
-            if key == 'fname' or key == '时间戳' or key == 'co' or key == '暗电流':
+            if key == 'fname' or key == 'timestamp' or key == 'co' or key == 'dark':
                 continue
-            if key == '部件地址':
-                label = 'addr'
-            if key == '状态':
-                label = 'state'
-            if key == '暗电流':
-                label = 'dark'
-            if key == '前向电流':
-                label = 'forward'
-            if key == '后向电流':
-                label = 'backward'
-            if key == '温度':
-                label = 'temperature'
-            plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=label)
+            plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
             plt.legend()
         plt.show()
         if not dir_save == '':

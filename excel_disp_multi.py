@@ -3,7 +3,7 @@ import glob
 import logging
 import os
 
-from utils import db_gen_v1, plot_dbs_v1, set_logging
+from utils import db_gen_v2, plot_db_v2, set_logging
 
 
 def run(args):
@@ -11,17 +11,21 @@ def run(args):
 
     for i, path_in in enumerate(paths_in):
         logging.info((path_in, i, len(paths_in)))
+        # v0 data
         # db = db_gen(path_in)
         # plot_db(db, 1)
-        dbs = db_gen_v1(path_in)
-        # logging.info(dbs)
-        plot_dbs_v1(dbs, pause_time_s=0.1)
+        # v1 data
+        # dbs = db_gen_v1(path_in)
+        # plot_dbs_v1(dbs, pause_time_s=0.1)
+        # v2 data
+        db = db_gen_v2(path_in)
+        plot_db_v2(db, pause_time_s=0.1)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_in',
-                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V1/neg',
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V2/pos',
                         type=str)
     return parser.parse_args()
 

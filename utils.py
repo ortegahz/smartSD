@@ -30,7 +30,7 @@ def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None, key_debug='
         key_idx - seq_len * shift_rate_left)
     idx_e = len(feats) if idx_s + seq_len > len(feats) else int(idx_s + seq_len)
     if db is not None:
-        db[key_debug.lower()][int(key_idx)] = 100
+        db[key_debug.lower()][int(key_idx - 1)] = 100
         db[key_debug.lower()][idx_s] = 255
         db[key_debug.lower()][idx_e - 1] = 255
     seq_pick = feats[idx_s:idx_e]
@@ -55,7 +55,7 @@ def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
     while key_idx + int(LEN_SEQ / 2) <= len(seq):
         idx_end = key_idx + int(LEN_SEQ / 2)
         mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
-        if mean > th_mean or seq[idx_end] > 220:
+        if mean > th_mean or seq[idx_end-1] > 220:
             break
         key_idx += int(LEN_SEQ / 2)
     # logging.info(f'mean --> {mean}')
@@ -71,6 +71,36 @@ def make_dirs(dir_root):
 def set_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+
+
+def db_gen_v2(path_in):
+    keys = ['time', 'address', 'status', 'temperature', 'forward', 'backward']
+    db = dict()
+    db['fname'] = path_in
+    for key in keys:
+        db[key] = list()
+    with open(path_in, 'r') as f:
+        lines = f.readlines()
+    lines_valid = lines[1:]
+    # logging.info(lines_valid)
+    for line in lines_valid:
+        line_lst = line.split()
+        # logging.info(line_lst)
+        db['address'].append(int(line_lst[2][:-1], base=16))
+        db['status'].append(int(line_lst[3], base=16))
+        db['forward'].append(int(line_lst[-1], base=16))
+        db['backward'].append(int(line_lst[-2], base=16))
+        db['temperature'].append(int(line_lst[-3], base=16))
+    addr_set = set(db['address'])
+    assert len(addr_set) == 1
+    for key in db.keys():
+        if key == 'time' or key == 'fname':
+            continue
+        if key == 'address':
+            db[key] = np.concatenate((np.array([db['address'][0]] * LEN_SEQ), np.array(db[key]).astype('float')), axis=0)
+        else:
+            db[key] = np.concatenate((np.array([0] * LEN_SEQ), np.array(db[key]).astype('float')), axis=0)
+    return db
 
 
 def db_gen_v1(path_in):
@@ -168,6 +198,24 @@ def db_gen(path_in):
 
     return db
 
+
+def plot_db_v2(db, pause_time_s=1, case='', dir_save='', idx_save=0):
+    plt.ion()
+    time_idxs = range(len(db['address']))
+    plt.title(db['fname'] + f' <{case}>')
+    for key in db.keys():
+        if key == 'fname' or key == 'time':
+            continue
+        plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
+        plt.legend()
+    plt.show()
+    if not dir_save == '':
+        fn_base, _ = os.path.basename(db['fname']).split('.')
+        plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
+    plt.pause(pause_time_s)
+    plt.clf()
+
+
 def plot_dbs_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     for db in dbs:
@@ -185,6 +233,7 @@ def plot_dbs_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
             plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
         plt.pause(pause_time_s)
         plt.clf()
+
 
 def plot_db_v1(db, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()

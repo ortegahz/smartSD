@@ -3,22 +3,27 @@ import glob
 import logging
 import os
 
-from utils import plot_db, db_gen, set_logging
+from utils import db_gen_v1, plot_db_v1, set_logging
 
 
 def run(args):
-    paths_in = glob.glob(os.path.join(args.dir_in, '*.xlsx'))
+    paths_in = glob.glob(os.path.join(args.dir_in, '*'))
 
-    for path_in in paths_in:
-        logging.info(path_in)
-        db = db_gen(path_in)
-        plot_db(db, 1)
+    for i, path_in in enumerate(paths_in):
+        logging.info((path_in, i, len(paths_in)))
+        if i == 17:
+            logging.info('debug')
+        # db = db_gen(path_in)
+        # plot_db(db, 1)
+        dbs = db_gen_v1(path_in)
+        # logging.info(dbs)
+        plot_db_v1(dbs, pause_time_s=1)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_TFS/neg',
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V1/neg',
                         type=str)
     return parser.parse_args()
 

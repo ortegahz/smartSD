@@ -73,6 +73,52 @@ def set_logging():
     logger.setLevel(logging.INFO)
 
 
+def db_gen_v1(path_in):
+    file_name = os.path.basename(path_in)
+    obj_xlrd = xlrd.open_workbook(path_in)
+    # logging.info(obj_xlrd)
+
+    sheet_names = obj_xlrd.sheet_names()
+    # logging.info(sheet_names)
+
+    obj_sheet_pick = None
+    for sheet_name in sheet_names:
+        obj_sheet = obj_xlrd.sheet_by_name(sheet_name)
+        # logging.info(obj_sheet)
+        nrows = obj_sheet.nrows
+        ncols = obj_sheet.ncols
+        # logging.info((nrows, ncols))
+        if nrows * ncols > 0:
+            obj_sheet_pick = obj_sheet
+
+    keys = obj_sheet_pick.row_values(0)
+    # logging.info(keys)
+
+    key_addr = '部件地址'
+    assert key_addr in keys
+    idx_addr = keys.index(key_addr)
+    raw_data_addr = obj_sheet_pick.col_values(idx_addr)[1:]
+    # logging.info(raw_data_addr)
+    addr_min, addr_max = min(raw_data_addr), max(raw_data_addr)
+    addr_set = set(raw_data_addr)
+
+    dbs = list()
+    for addr in addr_set:
+        db = dict()
+        db['fname'] = file_name
+        raw_data_addr_array = np.array(obj_sheet_pick.col_values(idx_addr)[1:])
+        data_mask = raw_data_addr_array == addr
+        for i, key in enumerate(keys):
+            raw_data_array = np.array(obj_sheet_pick.col_values(i)[1:])
+            if key == key_addr:
+                db[key.lower()] = np.concatenate((np.array([addr] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
+            else:
+                db[key.lower()] = np.concatenate((np.array([0] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
+        dbs.append(db)
+
+    return dbs
+
+
 def db_gen(path_in):
     file_name = os.path.basename(path_in)
     obj_xlrd = xlrd.open_workbook(path_in)
@@ -105,6 +151,37 @@ def db_gen(path_in):
     # db['Alarm'] = [0] * idx_alarm + [255] * (len(db['Time']) - idx_alarm)
 
     return db
+
+
+def plot_db_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
+    plt.ion()
+    for db in dbs:
+        time_idxs = range(len(db['部件地址'.lower()]))
+        plt.title(db['fname'] + f' <{case}>')
+        for key in db.keys():
+            label = key
+            if key == 'fname' or key == '时间戳' or key == 'co' or key == '暗电流':
+                continue
+            if key == '部件地址':
+                label = 'addr'
+            if key == '状态':
+                label = 'state'
+            if key == '暗电流':
+                label = 'dark'
+            if key == '前向电流':
+                label = 'forward'
+            if key == '后向电流':
+                label = 'backward'
+            if key == '温度':
+                label = 'temperature'
+            plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=label)
+            plt.legend()
+        plt.show()
+        if not dir_save == '':
+            fn_base, _ = os.path.basename(db['fname']).split('.')
+            plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
+        plt.pause(pause_time_s)
+        plt.clf()
 
 
 def plot_db(db, pause_time_s=1, label='', dir_save='', idx_save=0):

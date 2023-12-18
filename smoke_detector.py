@@ -69,30 +69,32 @@ class SmokeDetector:
             lines = f.readlines()
         return int(lines[1].split(' ')[0])
 
-    def infer_db(self, key):
-        if key not in self.db.keys():
-            return
-        sensor_db = self.db[key]
-        if sensor_db.get_seq_len() <= LEN_SEQ:
-            return
-        while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
-            seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
-            # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
-            seq_forward = np.array(seq_forward).astype(float)
-            # seq_state = np.array(seq_state).astype(float)
-            key_idx = find_key_idx(seq_forward)
-            if key_idx < 0:
-                sensor_db.cur_state_idx = sensor_db.get_seq_len()
+    def infer_db(self, keys):
+        for key in keys:
+            if key not in self.db.keys():
+                return
+        for key in keys:
+            sensor_db = self.db[key]
+            if sensor_db.get_seq_len() <= LEN_SEQ:
                 break
-            seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-            res = self.svm_infer(seq_pick)
-            if res > 0:
-                _seq_state = np.array(sensor_db.seq_state)
-                _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
-                sensor_db.seq_state = list(_seq_state)
-            # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
-            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
-            sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
+            while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
+                seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
+                # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
+                seq_forward = np.array(seq_forward).astype(float)
+                # seq_state = np.array(seq_state).astype(float)
+                key_idx = find_key_idx(seq_forward)
+                if key_idx < 0:
+                    sensor_db.cur_state_idx = sensor_db.get_seq_len()
+                    break
+                seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
+                res = self.svm_infer(seq_pick)
+                if res > 0:
+                    _seq_state = np.array(sensor_db.seq_state)
+                    _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
+                    sensor_db.seq_state = list(_seq_state)
+                # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
+                # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
+                sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
 
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):

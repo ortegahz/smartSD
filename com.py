@@ -1,6 +1,8 @@
 import argparse
 import logging
 
+import serial
+
 from utils import set_logging
 
 
@@ -10,7 +12,13 @@ def parse_args():
 
 
 def run():
-    pass
+    ser = serial.Serial('/dev/ttyUSB0', 115200)
+    ser.flushInput()
+    while True:
+        cnt = ser.inWaiting()
+        if cnt > 0:
+            recv = ser.read(ser.in_waiting).decode()
+            logging.info(recv)
 
 
 def main():

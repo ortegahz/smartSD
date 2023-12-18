@@ -1,11 +1,13 @@
 import logging
 import os
+import time
 from subprocess import *
 
 import matplotlib.pyplot as plt
 import numpy as np
+import serial
 
-from utils import MAX_SEQ, SENSOR_ID, find_key_idx, seq_pick_process, update_svm_label_file
+from utils import LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, update_svm_label_file
 
 
 class SensorDB:
@@ -44,6 +46,9 @@ class SmokeDetector:
     def __init__(self):
         self.db = dict()
         self.interval = 3
+        self.ser = serial.Serial('/dev/ttyUSB0', 115200)
+        self.ser_buff = ''
+        self.ser.flushInput()
 
     @staticmethod
     def svm_infer(seq, path_label='/home/manu/tmp/rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
@@ -65,7 +70,11 @@ class SmokeDetector:
         return int(lines[1].split(' ')[0])
 
     def infer_db(self, key):
+        if key not in self.db.keys():
+            return
         sensor_db = self.db[key]
+        if sensor_db.get_seq_len() <= LEN_SEQ:
+            return
         while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
             # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
@@ -90,6 +99,41 @@ class SmokeDetector:
         val *= scale
         val = th if val > th else val
         return val
+
+    def update_db_ser(self):
+        cnt = self.ser.inWaiting()
+        if cnt > 0:
+            recv = self.ser.read(self.ser.in_waiting).decode()
+            self.ser_buff += recv
+            if self.ser_buff[-1] == '\n':
+                buff_lst = self.ser_buff.split('\n')
+                buff_lst_valid = [x for x in buff_lst if len(x) > MIN_SER_CHAR_NUM - 1]
+                self.ser_buff = ''
+                logging.info(buff_lst_valid)
+                for seq_valid in buff_lst_valid:
+                    seq_valid_lst = seq_valid.strip().split()
+                    if seq_valid_lst[4] == '08':  # frame data
+                        logging.info(seq_valid_lst)
+                        # addr, forward, backward = seq_valid_lst[-4], seq_valid_lst[-6], seq_valid_lst[-2]
+                        addr, val_forward, val_backward = int(seq_valid_lst[-4], 16), int(seq_valid_lst[-6], 16), int(
+                            seq_valid_lst[-2], 16)
+                        logging.info((addr, val_forward, val_backward))
+                        db_key = '1' + '_' + str(addr)
+                        second_total = int(time.time())
+                        if db_key not in self.db.keys():
+                            self.db[db_key] = SensorDB(second_total)
+                        elif second_total - self.db[db_key].last_second_total > MAX_SEQ:
+                            self.db.pop(db_key)
+                            self.db[db_key] = SensorDB(second_total)
+                        elif second_total - self.db[db_key].last_second_total <= 0:
+                            continue
+                        elif second_total - self.db[db_key].last_second_total > self.interval:
+                            seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
+                            self.db[db_key].update(second_total, seq_pad, seq_pad, seq_pad)
+                        # val_forward, val_backward = self.value_preprocess(val_forward), self.value_preprocess(
+                        #     val_backward)
+                        self.db[db_key].update(second_total, [val_forward], [val_backward], [0])
+                        self.db[db_key].balance()
 
     def update_db(self, paths_txt_sorted):
         # paths_txt_sorted = sorted(paths_txt, key=self._cmp)
@@ -135,16 +179,21 @@ class SmokeDetector:
             logging.info(key)
             self.db[key].print_db()
 
-    def plot_db(self, key, pause_time_s=1):
-        if key not in self.db.keys():
-            return
-        time_idxs = range(self.db[key].get_seq_len())
+    def plot_db(self, keys, pause_time_s=1):
+        for key in keys:
+            if key not in self.db.keys():
+                return
         plt.ion()
-        plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward).astype(float), label='seq_forward'.lower())
-        plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward).astype(float), label='seq_backward'.lower())
-        plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state'.lower())
-        plt.legend()
-        plt.title(key)
+        for i, key in enumerate(keys):
+            time_idxs = range(self.db[key].get_seq_len())
+            plt.subplot(len(keys), 1, i + 1)
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward).astype(float), label='seq_forward'.lower())
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward).astype(float),
+                     label='seq_backward'.lower())
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state'.lower())
+            plt.ylim(0, 255)
+            plt.legend()
+            plt.title(key)
         plt.show()
         plt.pause(pause_time_s)
         plt.clf()

@@ -9,7 +9,8 @@ import xlrd
 LEN_SEQ = 32
 LEN_OVERLAP = 16
 MAX_SEQ = 4096 * 64
-SENSOR_ID = 1
+SENSOR_ID = 5
+MIN_SER_CHAR_NUM = 40
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):

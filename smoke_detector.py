@@ -53,7 +53,7 @@ class SmokeDetector:
         self.ser.flushInput()
 
     @staticmethod
-    def svm_infer(seq, path_label='/home/manu/tmp/rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
+    def svm_infer(seq, path_label='./rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
         svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
         svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
         range_file = os.path.join(dir_libsvm, 'tools', 'smartsd.range')
@@ -61,7 +61,8 @@ class SmokeDetector:
         test_pathname = path_label
         scaled_test_file = path_label + '.scale'
         predict_test_file = path_label + '.predict'
-        os.remove(path_label)
+        if os.path.exists(path_label):
+            os.remove(path_label)
         update_svm_label_file(seq, path_label)
         cmd = '{0} -l 0 -u 1 -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
         Popen(cmd, shell=True, stdout=PIPE).communicate()
@@ -71,7 +72,7 @@ class SmokeDetector:
             lines = f.readlines()
         return int(lines[1].split(' ')[0])
 
-    def infer_db(self, keys):
+    def infer_db(self, keys, dir_root_svm):
         for key in keys:
             if key not in self.db.keys():
                 return
@@ -103,7 +104,7 @@ class SmokeDetector:
                     # sensor_db.cnt_alarm = 0  # counter reset
                     continue
                 seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-                res = self.svm_infer(seq_pick)
+                res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
                 logging.info((key, sensor_db.cnt_alarm, res))
                 if sensor_db.cnt_alarm > ALARM_CNT_TH or res > 0:
                     _seq_state = np.array(sensor_db.seq_state)

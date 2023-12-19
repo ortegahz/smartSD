@@ -6,8 +6,9 @@ from subprocess import *
 import matplotlib.pyplot as plt
 import numpy as np
 import serial
+import sys
 
-from utils import ALARM_CNT_TH, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, \
+from utils import ALARM_CNT_TH, ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, \
     update_svm_label_file
 
 
@@ -19,6 +20,7 @@ class SensorDB:
         self.last_second_total = second_total
         self.cur_state_idx = 0
         self.cnt_alarm = 0
+        self.cnt_alarm_svm = 0
 
     def update(self, second_total, cur_forward, cur_backward, cur_state):
         self.last_second_total = second_total
@@ -54,8 +56,13 @@ class SmokeDetector:
 
     @staticmethod
     def svm_infer(seq, path_label='./rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
-        svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
-        svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
+        is_win32 = (sys.platform == 'win32')
+        if is_win32:
+            svmscale_exe = os.path.join(dir_libsvm, 'windows', 'svm-scale.exe')
+            svmpredict_exe = os.path.join(dir_libsvm, 'windows', 'svm-predict.exe')
+        else:
+            svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
+            svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
         range_file = os.path.join(dir_libsvm, 'tools', 'smartsd.range')
         model_file = os.path.join(dir_libsvm, 'tools', 'smartsd.model')
         test_pathname = path_label
@@ -89,7 +96,8 @@ class SmokeDetector:
                 seq_forward = np.array(seq_forward).astype(float)
                 # seq_state = np.array(seq_state).astype(float)
                 sensor_db.cnt_alarm = sensor_db.cnt_alarm + 1 if seq_forward[-1] > 254.5 else 0
-                logging.info((key, sensor_db.cnt_alarm, seq_forward[-1]))
+                sensor_db.seq_state[sensor_db.cur_state_idx] = sensor_db.cnt_alarm * 4
+                logging.info(('ceil logic info', key, sensor_db.cnt_alarm, seq_forward[-1]))
                 if sensor_db.cnt_alarm > ALARM_CNT_TH:
                     logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
                     _seq_state = np.array(sensor_db.seq_state)
@@ -102,11 +110,14 @@ class SmokeDetector:
                     # break
                     sensor_db.cur_state_idx += 1
                     # sensor_db.cnt_alarm = 0  # counter reset
+                    sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
                     continue
                 seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
                 res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
-                logging.info((key, sensor_db.cnt_alarm, res))
-                if sensor_db.cnt_alarm > ALARM_CNT_TH or res > 0:
+                # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
+                sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + 1 if res > 0 else 0
+                logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res))
+                if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
                     _seq_state = np.array(sensor_db.seq_state)
                     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
                     sensor_db.seq_state = list(_seq_state)

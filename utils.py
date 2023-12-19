@@ -11,6 +11,7 @@ LEN_OVERLAP = 16
 MAX_SEQ = 4096 * 64
 SENSOR_ID = 5
 MIN_SER_CHAR_NUM = 40
+ALARM_CNT_TH = 16
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):
@@ -45,22 +46,31 @@ def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None, key_debug='
 def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
     cnt = 0
     key_idx = -1
+    # filter one
     for i, val in enumerate(seq):
         cnt = cnt + 1 if val > th_val else 0
         if cnt > th_cnt:
             key_idx = i
+            logging.info(f'filter one found key_idx -> {key_idx}')
             break
     if key_idx == -1:
         return key_idx
-    mean = 0.
+    # filter two
+    flag_valid = False
     while key_idx + int(LEN_SEQ / 2) <= len(seq):
+        # logging.info(f'key_idx -> {key_idx}')
         idx_end = key_idx + int(LEN_SEQ / 2)
+        # idx_start = key_idx - int(LEN_SEQ / 2)
         mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
-        if mean > th_mean or seq[idx_end-1] > 220:
+        # if mean > th_mean or seq[idx_end-1] > 220:
+        logging.info(f'seq[idx_end - 1] - seq[key_idx] -> {seq[idx_end - 1] - seq[key_idx]}')
+        if seq[idx_end - 1] - seq[key_idx] > 20:
+            flag_valid = True
+            logging.info(f'filter two found key_idx -> {key_idx}')
             break
         key_idx += int(LEN_SEQ / 2)
     # logging.info(f'mean --> {mean}')
-    return key_idx
+    return key_idx if flag_valid else -1
 
 
 def make_dirs(dir_root):
@@ -98,7 +108,8 @@ def db_gen_v2(path_in):
         if key == 'time' or key == 'fname':
             continue
         if key == 'address':
-            db[key] = np.concatenate((np.array([db['address'][0]] * LEN_SEQ), np.array(db[key]).astype('float')), axis=0)
+            db[key] = np.concatenate((np.array([db['address'][0]] * LEN_SEQ), np.array(db[key]).astype('float')),
+                                     axis=0)
         else:
             db[key] = np.concatenate((np.array([0] * LEN_SEQ), np.array(db[key]).astype('float')), axis=0)
     return db

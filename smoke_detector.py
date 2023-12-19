@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import serial
 
-from utils import LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, update_svm_label_file
+from utils import ALARM_CNT_TH, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, \
+    update_svm_label_file
 
 
 class SensorDB:
@@ -17,6 +18,7 @@ class SensorDB:
         self.seq_backward = list()
         self.last_second_total = second_total
         self.cur_state_idx = 0
+        self.cnt_alarm = 0
 
     def update(self, second_total, cur_forward, cur_backward, cur_state):
         self.last_second_total = second_total
@@ -75,26 +77,42 @@ class SmokeDetector:
                 return
         for key in keys:
             sensor_db = self.db[key]
+            # logging.info((key, sensor_db.cur_state_idx, sensor_db.get_seq_len()))
             if sensor_db.get_seq_len() <= LEN_SEQ:
-                break
-            while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
+                logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
+                continue
+            # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
+            while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
                 seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
                 # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
                 seq_forward = np.array(seq_forward).astype(float)
                 # seq_state = np.array(seq_state).astype(float)
+                sensor_db.cnt_alarm = sensor_db.cnt_alarm + 1 if seq_forward[-1] > 254.5 else 0
+                logging.info((key, sensor_db.cnt_alarm, seq_forward[-1]))
+                if sensor_db.cnt_alarm > ALARM_CNT_TH:
+                    logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
+                    _seq_state = np.array(sensor_db.seq_state)
+                    _seq_state[sensor_db.cur_state_idx:] = 70
+                    sensor_db.seq_state = list(_seq_state)
                 key_idx = find_key_idx(seq_forward)
                 if key_idx < 0:
-                    sensor_db.cur_state_idx = sensor_db.get_seq_len()
-                    break
+                    logging.info('key_idx < 0')
+                    # sensor_db.cur_state_idx = sensor_db.get_seq_len()
+                    # break
+                    sensor_db.cur_state_idx += 1
+                    # sensor_db.cnt_alarm = 0  # counter reset
+                    continue
                 seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
                 res = self.svm_infer(seq_pick)
-                if res > 0:
+                logging.info((key, sensor_db.cnt_alarm, res))
+                if sensor_db.cnt_alarm > ALARM_CNT_TH or res > 0:
                     _seq_state = np.array(sensor_db.seq_state)
                     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
                     sensor_db.seq_state = list(_seq_state)
                 # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
                 # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
-                sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
+                # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
+                sensor_db.cur_state_idx += 1
 
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):
@@ -111,15 +129,15 @@ class SmokeDetector:
                 buff_lst = self.ser_buff.split('\n')
                 buff_lst_valid = [x for x in buff_lst if len(x) > MIN_SER_CHAR_NUM - 1]
                 self.ser_buff = ''
-                logging.info(buff_lst_valid)
+                # logging.info(buff_lst_valid)
                 for seq_valid in buff_lst_valid:
                     seq_valid_lst = seq_valid.strip().split()
                     if seq_valid_lst[4] == '08':  # frame data
-                        logging.info(seq_valid_lst)
+                        # logging.info(seq_valid_lst)
                         # addr, forward, backward = seq_valid_lst[-4], seq_valid_lst[-6], seq_valid_lst[-2]
                         addr, val_forward, val_backward = int(seq_valid_lst[-4], 16), int(seq_valid_lst[-6], 16), int(
                             seq_valid_lst[-2], 16)
-                        logging.info((addr, val_forward, val_backward))
+                        # logging.info((addr, val_forward, val_backward))
                         db_key = '1' + '_' + str(addr)
                         second_total = int(time.time())
                         if db_key not in self.db.keys():

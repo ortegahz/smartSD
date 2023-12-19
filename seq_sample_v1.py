@@ -14,7 +14,9 @@ def run(args):
     if os.path.exists(args.path_out):
         os.remove(args.path_out)
 
-    idx_save = args.base_idx_save + 1
+    num_exist_files = len(glob.glob(os.path.join(args.dir_plot_save, '*')))
+    idx_save = num_exist_files
+
     for subset in args.subsets:
         dir_in_s = os.path.join(args.dir_in, subset)
         paths_src = glob.glob(os.path.join(dir_in_s, '*'))
@@ -23,9 +25,11 @@ def run(args):
             for db in db_gen_v1(path_src):
                 feats = np.array(db[args.key_choose.lower()]).astype(float)
                 key_idx = find_key_idx(feats)
-                if subset == 'pos':
-                    assert key_idx > 0
-                if subset == 'neg' and key_idx < 0:
+                # if subset == 'pos':
+                #     assert key_idx > 0
+                # if subset == 'neg' and key_idx < 0:
+                #     continue
+                if key_idx < 0:
                     continue
                 seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db, key_debug='addr')
                 update_svm_label_file(seq_pick, args.path_out, subset)
@@ -47,7 +51,6 @@ def parse_args():
     parser.add_argument('--key_choose', default='forward')
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/smartsd_plot')
     parser.add_argument('--save_plot', default=True)
-    parser.add_argument('--base_idx_save', default=231)
     return parser.parse_args()
 
 

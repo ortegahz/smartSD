@@ -25,9 +25,11 @@ def run(args):
             feats = np.array(db[args.key_choose.lower()]).astype(float)
             # key_idx = np.nonzero(status)[0][0] if len(np.nonzero(status)[0]) > 0 else len(status) / 2
             key_idx = find_key_idx(feats)
-            if subset == 'pos':
-                assert key_idx > 0
-            if subset == 'neg' and key_idx < 0:
+            # if subset == 'pos':
+            #     assert key_idx > 0
+            # if subset == 'neg' and key_idx < 0:
+            #     continue
+            if key_idx < 0:
                 continue
             seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db)
             # logging.info((idx_save, np.max(seq_pick)))

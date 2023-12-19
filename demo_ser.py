@@ -10,7 +10,8 @@ from utils import set_logging, SENSOR_ID
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--addrs_sensor', default=[f'1_{1}', f'1_{5}'])
+    # parser.add_argument('--addrs_sensor', default=[f'1_{1}', f'1_{5}'])
+    parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     return parser.parse_args()
 
 

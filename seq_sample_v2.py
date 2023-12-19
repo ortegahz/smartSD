@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from utils import set_logging, db_gen_v2, plot_db_v2, find_key_idx, seq_pick_process, update_svm_label_file
-
+from fft import fft_wrapper
 
 def run(args):
     # if args.save_plot:
@@ -32,9 +32,10 @@ def run(args):
             if key_idx < 0:
                 continue
             seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db, key_debug='address')
+            seq_pick_fft = fft_wrapper(seq_pick)
             update_svm_label_file(seq_pick, args.path_out, subset)
             if args.save_plot:
-                plot_db_v2(db, 0.1, subset, args.dir_plot_save, idx_save)
+                plot_db_v2(db, seq_pick_fft, 0.1, subset, args.dir_plot_save, idx_save)
             logging.info(idx_save)
             idx_save += 1
 

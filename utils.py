@@ -211,10 +211,12 @@ def db_gen(path_in):
     return db
 
 
-def plot_db_v2(db, pause_time_s=1, case='', dir_save='', idx_save=0):
+def plot_db_v2(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     time_idxs = range(len(db['address']))
+    freq_idxs = range(len(seq_fft))
     plt.title(db['fname'] + f' <{case}>')
+    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     for key in db.keys():
         if key == 'fname' or key == 'time':
             continue
@@ -247,10 +249,12 @@ def plot_dbs_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
         plt.clf()
 
 
-def plot_db_v1(db, pause_time_s=1, case='', dir_save='', idx_save=0):
+def plot_db_v1(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     time_idxs = range(len(db['addr'.lower()]))
+    freq_idxs = range(len(seq_fft))
     plt.title(db['fname'] + f' <{case}>')
+    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     for key in db.keys():
         if key == 'fname' or key == 'timestamp' or key == 'co' or key == 'dark':
             continue
@@ -264,10 +268,12 @@ def plot_db_v1(db, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.clf()
 
 
-def plot_db(db, pause_time_s=1, label='', dir_save='', idx_save=0):
+def plot_db(db, seq_fft, pause_time_s=1, label='', dir_save='', idx_save=0):
     time_idxs = range(len(db['Time'.lower()]))
+    freq_idxs = range(len(seq_fft))
 
     plt.ion()
+    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Line'.lower()]))
     # plt.plot(np.array(time_idxs), np.array(db['Address'.lower()]))
     plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]).astype(float), label='Status'.lower())

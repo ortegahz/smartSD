@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 
+from fft import fft_wrapper
 from utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process, update_svm_label_file
 
 
@@ -32,10 +33,11 @@ def run(args):
             if key_idx < 0:
                 continue
             seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db)
+            seq_pick_fft = fft_wrapper(seq_pick)
             # logging.info((idx_save, np.max(seq_pick)))
             update_svm_label_file(seq_pick, args.path_out, subset)
             if args.save_plot:
-                plot_db(db, 0.1, subset, args.dir_plot_save, idx_save)
+                plot_db(db, seq_pick_fft, 0.1, subset, args.dir_plot_save, idx_save)
             idx_save += 1
 
 

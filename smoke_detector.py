@@ -130,13 +130,13 @@ class SmokeDetector:
                 seq_forward = np.array(seq_forward).astype(float)
                 # seq_state = np.array(seq_state).astype(float)
                 sensor_db.cnt_alarm = sensor_db.cnt_alarm + 1 if seq_forward[-1] > 254.5 else 0
-                sensor_db.seq_state[sensor_db.cur_state_idx] = sensor_db.cnt_alarm * 4
+                # sensor_db.seq_state[sensor_db.cur_state_idx] = sensor_db.cnt_alarm * 4
                 logging.info(('ceil logic info', key, sensor_db.cnt_alarm, seq_forward[-1]))
-                if sensor_db.cnt_alarm > ALARM_CNT_TH:
-                    logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
-                    _seq_state = np.array(sensor_db.seq_state)
-                    _seq_state[sensor_db.cur_state_idx:] = 70
-                    sensor_db.seq_state = list(_seq_state)
+                # if sensor_db.cnt_alarm > ALARM_CNT_TH:
+                #     logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
+                #     _seq_state = np.array(sensor_db.seq_state)
+                #     _seq_state[sensor_db.cur_state_idx:] = 70
+                #     sensor_db.seq_state = list(_seq_state)
                 key_idx = find_key_idx(seq_forward)
                 if key_idx < 0:
                     logging.info('key_idx < 0')
@@ -152,16 +152,18 @@ class SmokeDetector:
                 res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
                 weight = 0.5
                 score = res * weight + res_freq * (1 - weight)
-                plt.plot(key_idx, float(res), 'b')
-                plt.plot(key_idx, float(res_freq), 'g')
-                plt.plot(key_idx, float(score), 'r')
+                # score = 1
+                sensor_db.seq_state_time[idx_e + sensor_db.cur_state_idx] = res * 50
+                sensor_db.seq_state_freq[idx_e + sensor_db.cur_state_idx] = res_freq * 100
+                sensor_db.seq_state[idx_e + sensor_db.cur_state_idx] = score * 150
                 # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
                 sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
-                logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, score))
-                if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
-                    _seq_state = np.array(sensor_db.seq_state)
-                    _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70
-                    sensor_db.seq_state = list(_seq_state)
+                logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
+                # if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
+                # if score > 0:
+                #     _seq_state = np.array(sensor_db.seq_state)
+                #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
+                #     sensor_db.seq_state = list(_seq_state)
                 # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
                 # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
                 # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
@@ -179,7 +181,7 @@ class SmokeDetector:
         for feat_forward, feat_backward in zip(feats_forward, feats_backward):
             if db_key not in self.db.keys():
                 self.db[db_key] = SensorDB()
-            self.db[db_key].update([feat_forward], [feat_backward], [0])
+            self.db[db_key].update([feat_forward], [feat_backward], [0], [0], [0])
             self.db[db_key].balance()
 
     def update_db_ser(self):
@@ -269,11 +271,12 @@ class SmokeDetector:
         for i, key in enumerate(keys):
             time_idxs = range(self.db[key].get_seq_len())
             plt.subplot(len(keys), 1, i + 1)
-            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward).astype(float), label='seq_forward'.lower())
-            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward).astype(float),
-                     label='seq_backward'.lower())
-            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state'.lower())
-            plt.ylim(0, 255)
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward).astype(float), label='seq_forward')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward).astype(float), label='seq_backward')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_time).astype(float), label='seq_state_time')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_freq).astype(float), label='seq_state_freq')
+            plt.ylim(-255, 255)
             plt.legend()
             plt.title(key)
         plt.show()

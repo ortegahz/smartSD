@@ -12,7 +12,7 @@ MAX_SEQ = 4096 * 64
 SENSOR_ID = 5
 MIN_SER_CHAR_NUM = 40
 ALARM_CNT_TH = 16
-ALARM_CNT_TH_SVM = 1
+ALARM_CNT_TH_SVM = 0
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):

@@ -15,7 +15,9 @@ from utils import ALARM_CNT_TH, ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, M
 
 
 class SensorDB:
-    def __init__(self, second_total):
+    def __init__(self, second_total=-1):
+        self.seq_state_time = list()
+        self.seq_state_freq = list()
         self.seq_state = list()
         self.seq_forward = list()
         self.seq_backward = list()
@@ -24,13 +26,17 @@ class SensorDB:
         self.cnt_alarm = 0
         self.cnt_alarm_svm = 0
 
-    def update(self, second_total, cur_forward, cur_backward, cur_state):
+    def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, second_total=-1):
         self.last_second_total = second_total
+        self.seq_state_time.extend(cur_state_t)
+        self.seq_state_freq.extend(cur_state_f)
         self.seq_state.extend(cur_state)
         self.seq_forward.extend(cur_forward)
         self.seq_backward.extend(cur_backward)
 
     def balance(self):
+        self.seq_state_time = self.seq_state_time[-MAX_SEQ:]
+        self.seq_state_freq = self.seq_state_freq[-MAX_SEQ:]
         self.seq_state = self.seq_state[-MAX_SEQ:]
         self.seq_forward = self.seq_forward[-MAX_SEQ:]
         self.seq_backward = self.seq_backward[-MAX_SEQ:]
@@ -43,18 +49,17 @@ class SensorDB:
         logging.info(('seq_state', self.seq_state))
         logging.info(('seq_forward', self.seq_forward))
         logging.info(('seq_backward', self.seq_backward))
-        # logging.info(('seq_forward_reversed', list(reversed(self.seq_forward))))
-        # logging.info(('seq_backward_reversed', list(reversed(self.seq_backward))))
         logging.info(('seq len', len(self.seq_forward), len(self.seq_backward)))
 
 
 class SmokeDetector:
-    def __init__(self):
+    def __init__(self, dev_ser=None):
         self.db = dict()
         self.interval = 3
-        self.ser = serial.Serial('/dev/ttyUSB0', 115200)
-        self.ser_buff = ''
-        self.ser.flushInput()
+        if dev_ser:
+            self.ser = serial.Serial('/dev/ttyUSB0', 115200)
+            self.ser_buff = ''
+            self.ser.flushInput()
 
     @staticmethod
     def svm_infer_freq(seq, path_label='./rtsvm_freq', dir_libsvm='/home/manu/nfs/libsvm'):
@@ -146,7 +151,10 @@ class SmokeDetector:
                 seq_pick_fft = fft_wrapper(seq_pick)
                 res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
                 weight = 0.5
-                score = res * weight + seq_pick_fft * (1 - weight)
+                score = res * weight + res_freq * (1 - weight)
+                plt.plot(key_idx, float(res), 'b')
+                plt.plot(key_idx, float(res_freq), 'g')
+                plt.plot(key_idx, float(score), 'r')
                 # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
                 sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
                 logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, score))
@@ -164,6 +172,15 @@ class SmokeDetector:
         val *= scale
         val = th if val > th else val
         return val
+
+    def update_db_v1(self, db, key_forward, key_backward, db_key='1_1'):
+        feats_forward = np.array(db[key_forward.lower()]).astype('float')
+        feats_backward = np.array(db[key_backward.lower()]).astype('float')
+        for feat_forward, feat_backward in zip(feats_forward, feats_backward):
+            if db_key not in self.db.keys():
+                self.db[db_key] = SensorDB()
+            self.db[db_key].update([feat_forward], [feat_backward], [0])
+            self.db[db_key].balance()
 
     def update_db_ser(self):
         cnt = self.ser.inWaiting()

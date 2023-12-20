@@ -8,3 +8,9 @@ rtsvm\.scale
 rtsvm
 
 rtsvm\.predict
+
+rtsvm_freq\.scale
+
+rtsvm_freq\.predict
+
+rtsvm_freq

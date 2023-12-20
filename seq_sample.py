@@ -35,7 +35,7 @@ def run(args):
             seq_pick, _, _ = seq_pick_process(feats, key_idx, db=db)
             seq_pick_fft = fft_wrapper(seq_pick)
             # logging.info((idx_save, np.max(seq_pick)))
-            update_svm_label_file(seq_pick_fft, args.path_out, subset)
+            update_svm_label_file(seq_pick, args.path_out, subset)
             if args.save_plot:
                 plot_db(db, seq_pick_fft, 0.1, subset, args.dir_plot_save, idx_save)
             idx_save += 1

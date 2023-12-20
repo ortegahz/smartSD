@@ -269,12 +269,12 @@ def plot_db_v1(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.clf()
 
 
-def plot_db(db, seq_fft, pause_time_s=1, label='', dir_save='', idx_save=0):
+def plot_db(db, seq_fft=None, pause_time_s=1, label='', dir_save='', idx_save=0):
     time_idxs = range(len(db['Time'.lower()]))
-    freq_idxs = range(len(seq_fft))
-
     plt.ion()
-    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
+    if seq_fft is not None:
+        freq_idxs = range(len(seq_fft))
+        plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     # plt.plot(np.array(time_idxs), np.array(db['Line'.lower()]))
     # plt.plot(np.array(time_idxs), np.array(db['Address'.lower()]))
     plt.plot(np.array(time_idxs), np.array(db['Status'.lower()]).astype(float), label='Status'.lower())

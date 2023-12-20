@@ -1,14 +1,16 @@
 import logging
 import os
+import sys
 import time
 from subprocess import *
 
 import matplotlib.pyplot as plt
 import numpy as np
 import serial
-import sys
 
-from utils import ALARM_CNT_TH, ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, seq_pick_process, \
+from fft import fft_wrapper
+from utils import ALARM_CNT_TH, ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, \
+    seq_pick_process, \
     update_svm_label_file
 
 
@@ -55,6 +57,32 @@ class SmokeDetector:
         self.ser.flushInput()
 
     @staticmethod
+    def svm_infer_freq(seq, path_label='./rtsvm_freq', dir_libsvm='/home/manu/nfs/libsvm'):
+        is_win32 = (sys.platform == 'win32')
+        if is_win32:
+            svmscale_exe = os.path.join(dir_libsvm, 'windows', 'svm-scale.exe')
+            svmpredict_exe = os.path.join(dir_libsvm, 'windows', 'svm-predict.exe')
+        else:
+            svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
+            svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
+        range_file = os.path.join(dir_libsvm, 'tools', 'smartsd_freq.range')
+        model_file = os.path.join(dir_libsvm, 'tools', 'smartsd_freq.model')
+        test_pathname = path_label
+        scaled_test_file = path_label + '.scale'
+        predict_test_file = path_label + '.predict'
+        if os.path.exists(path_label):
+            os.remove(path_label)
+        update_svm_label_file(seq, path_label)
+        cmd = '{0} -l 0 -u 1 -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
+        Popen(cmd, shell=True, stdout=PIPE).communicate()
+        cmd = '{0} -b 0 "{1}" "{2}" "{3}"'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
+        Popen(cmd, shell=True).communicate()
+        with open(predict_test_file) as f:
+            lines = f.readlines()
+        # return int(lines[1].split(' ')[0])
+        return int(lines[0].strip())
+
+    @staticmethod
     def svm_infer(seq, path_label='./rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
         is_win32 = (sys.platform == 'win32')
         if is_win32:
@@ -73,11 +101,12 @@ class SmokeDetector:
         update_svm_label_file(seq, path_label)
         cmd = '{0} -l 0 -u 1 -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
         Popen(cmd, shell=True, stdout=PIPE).communicate()
-        cmd = '{0} -b 1 "{1}" "{2}" "{3}"'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
+        cmd = '{0} -b 0 "{1}" "{2}" "{3}"'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
         Popen(cmd, shell=True).communicate()
         with open(predict_test_file) as f:
             lines = f.readlines()
-        return int(lines[1].split(' ')[0])
+        # return int(lines[1].split(' ')[0])
+        return int(lines[0].strip())
 
     def infer_db(self, keys, dir_root_svm):
         for key in keys:
@@ -114,9 +143,13 @@ class SmokeDetector:
                     continue
                 seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
                 res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
+                seq_pick_fft = fft_wrapper(seq_pick)
+                res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
+                weight = 0.5
+                score = res * weight + seq_pick_fft * (1 - weight)
                 # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
-                sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + 1 if res > 0 else 0
-                logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res))
+                sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
+                logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, score))
                 if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
                     _seq_state = np.array(sensor_db.seq_state)
                     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 70

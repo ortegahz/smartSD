@@ -57,7 +57,7 @@ class SmokeDetector:
         self.db = dict()
         self.interval = 3
         if dev_ser:
-            self.ser = serial.Serial('/dev/ttyUSB0', 115200)
+            self.ser = serial.Serial(dev_ser, 115200)
             self.ser_buff = ''
             self.ser.flushInput()
 
@@ -134,6 +134,7 @@ class SmokeDetector:
                 logging.info(('ceil logic info', key, sensor_db.cnt_alarm, seq_forward[-1]))
                 # if sensor_db.cnt_alarm > ALARM_CNT_TH:
                 #     logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
+                #     sensor_db.seq_state[sensor_db.cur_state_idx] = 220
                 #     _seq_state = np.array(sensor_db.seq_state)
                 #     _seq_state[sensor_db.cur_state_idx:] = 70
                 #     sensor_db.seq_state = list(_seq_state)
@@ -153,14 +154,14 @@ class SmokeDetector:
                 weight = 0.5
                 score = res * weight + res_freq * (1 - weight)
                 # score = 1
-                sensor_db.seq_state_time[idx_e + sensor_db.cur_state_idx] = res * 50
-                sensor_db.seq_state_freq[idx_e + sensor_db.cur_state_idx] = res_freq * 100
-                sensor_db.seq_state[idx_e + sensor_db.cur_state_idx] = score * 150
+                sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * 50
+                sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = res_freq * 100
+                sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 150
                 # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
                 sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
                 logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
-                # if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
-                # if score > 0:
+                if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
+                    sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 200
                 #     _seq_state = np.array(sensor_db.seq_state)
                 #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
                 #     sensor_db.seq_state = list(_seq_state)
@@ -213,10 +214,10 @@ class SmokeDetector:
                             continue
                         elif second_total - self.db[db_key].last_second_total > self.interval:
                             seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
-                            self.db[db_key].update(second_total, seq_pad, seq_pad, seq_pad)
+                            self.db[db_key].update(seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, second_total)
                         # val_forward, val_backward = self.value_preprocess(val_forward), self.value_preprocess(
                         #     val_backward)
-                        self.db[db_key].update(second_total, [val_forward], [val_backward], [0])
+                        self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], second_total)
                         self.db[db_key].balance()
 
     def update_db(self, paths_txt_sorted):

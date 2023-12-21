@@ -9,13 +9,15 @@ import numpy as np
 import serial
 
 from fft import fft_wrapper
-from utils import ALARM_CNT_TH, ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, \
+from utils import ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, \
     seq_pick_process, \
     update_svm_label_file
 
 
 class SensorDB:
     def __init__(self, second_total=-1):
+        self.seq_forward_amp = list()
+        self.seq_backward_amp = list()
         self.seq_state_time = list()
         self.seq_state_freq = list()
         self.seq_state = list()
@@ -26,13 +28,16 @@ class SensorDB:
         self.cnt_alarm = 0
         self.cnt_alarm_svm = 0
 
-    def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, second_total=-1):
+    def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
+               second_total=-1):
         self.last_second_total = second_total
         self.seq_state_time.extend(cur_state_t)
         self.seq_state_freq.extend(cur_state_f)
         self.seq_state.extend(cur_state)
         self.seq_forward.extend(cur_forward)
         self.seq_backward.extend(cur_backward)
+        self.seq_forward_amp.extend(cur_forward_amp)
+        self.seq_backward_amp.extend(cur_backward_amp)
 
     def balance(self):
         self.seq_state_time = self.seq_state_time[-MAX_SEQ:]
@@ -40,6 +45,8 @@ class SensorDB:
         self.seq_state = self.seq_state[-MAX_SEQ:]
         self.seq_forward = self.seq_forward[-MAX_SEQ:]
         self.seq_backward = self.seq_backward[-MAX_SEQ:]
+        self.seq_forward_amp = self.seq_forward_amp[-MAX_SEQ:]
+        self.seq_backward_amp = self.seq_backward_amp[-MAX_SEQ:]
 
     def get_seq_len(self):
         assert len(self.seq_forward) == len(self.seq_backward) and len(self.seq_state) == len(self.seq_backward)
@@ -185,6 +192,50 @@ class SmokeDetector:
             self.db[db_key].update([feat_forward], [feat_backward], [0], [0], [0])
             self.db[db_key].balance()
 
+    def update_db_ser_multi_amp(self):
+        magnifications = (141.6488675, 68.47658, 37.79155058, 18.84206, 9.421031, 4.7105153, 2.355258, 1.177629,
+                          0.588814, 0.294407, 0.1472036, 0.073602, 0.036801)
+        cnt = self.ser.inWaiting()
+        if cnt <= 0:
+            return
+        recv = self.ser.read(self.ser.in_waiting).decode()
+        self.ser_buff += recv
+        if not self.ser_buff[-1] == '\n':
+            return
+        buff_lst = self.ser_buff.split('\n')
+        buff_lst_valid = [x for x in buff_lst if len(x) > MIN_SER_CHAR_NUM - 1]
+        self.ser_buff = ''
+        # logging.info(buff_lst_valid)
+        for seq_valid in buff_lst_valid:
+            seq_valid_lst = seq_valid.strip().split()
+            if seq_valid_lst[4] == '08':  # frame data
+                logging.info(seq_valid_lst)
+                # addr, forward, backward = seq_valid_lst[-4], seq_valid_lst[-6], seq_valid_lst[-2]
+                addr, val_forward, val_backward, amp_forward, amp_backward = int(seq_valid_lst[-4], 16), int(
+                    seq_valid_lst[-6], 16), int(seq_valid_lst[-2], 16), (int(seq_valid_lst[-1], 16) & 0xf0) >> 4, int(
+                    seq_valid_lst[-1], 16) & 0x0f
+                val_forward = val_forward / magnifications[amp_forward] * magnifications[1]
+                val_backward = val_backward / magnifications[amp_backward] * magnifications[0]
+                logging.info((addr, val_forward, val_backward, amp_forward, amp_backward))
+                db_key = '1' + '_' + str(addr)
+                second_total = int(time.time())
+                if db_key not in self.db.keys():
+                    self.db[db_key] = SensorDB(second_total)
+                elif second_total - self.db[db_key].last_second_total > MAX_SEQ:
+                    self.db.pop(db_key)
+                    self.db[db_key] = SensorDB(second_total)
+                elif second_total - self.db[db_key].last_second_total <= 0:
+                    continue
+                elif second_total - self.db[db_key].last_second_total > self.interval:
+                    seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
+                    self.db[db_key].update(seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, second_total)
+                # val_forward, val_backward = self.value_preprocess(val_forward), self.value_preprocess(
+                #     val_backward)
+                self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [amp_forward * 1000],
+                                       [amp_backward * 1000],
+                                       second_total)
+                self.db[db_key].balance()
+
     def update_db_ser(self):
         cnt = self.ser.inWaiting()
         if cnt > 0:
@@ -277,7 +328,10 @@ class SmokeDetector:
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state).astype(float), label='seq_state')
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_time).astype(float), label='seq_state_time')
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_freq).astype(float), label='seq_state_freq')
-            plt.ylim(-255, 255)
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward_amp).astype(float), label='seq_forward_amp')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward_amp).astype(float), label='seq_backward_amp')
+            # plt.ylim(-255, 255)
+            plt.ylim(-255, 2 ** 16)
             plt.legend()
             plt.title(key)
         plt.show()

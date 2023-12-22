@@ -9,7 +9,7 @@ import numpy as np
 import serial
 
 from fft import fft_wrapper
-from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, SENSE_LOW_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
+from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
     MAX_SEQ, SENSOR_ID, \
     MIN_SER_CHAR_NUM, \
     find_key_idx, \
@@ -215,6 +215,14 @@ class SmokeDetector:
         val = th if val > th else val
         return val
 
+    def update_db_v3(self, db, idx, key_forward='forward', key_backward='backward', db_key='1_1'):
+        feat_forward = np.array(db[key_forward.lower()]).astype('float')[idx]
+        feat_backward = np.array(db[key_backward.lower()]).astype('float')[idx]
+        if db_key not in self.db.keys():
+            self.db[db_key] = SensorDB()
+        self.db[db_key].update([feat_forward], [feat_backward], [0], [0], [0], [0], [0], [0])
+        self.db[db_key].balance()
+
     def update_db_v1(self, db, key_forward, key_backward, db_key='1_1'):
         feats_forward = np.array(db[key_forward.lower()]).astype('float')
         feats_backward = np.array(db[key_backward.lower()]).astype('float')
@@ -391,5 +399,3 @@ class SmokeDetector:
                     val_forward = np.array(self.db[key].seq_forward[i + save_idxes[0]]).astype('float')
                     val_backward = np.array(self.db[key].seq_backward[i + save_idxes[0]]).astype('float')
                     f.write(f'{val_forward} {val_backward} \n')
-
-

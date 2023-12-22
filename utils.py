@@ -90,6 +90,24 @@ def set_logging():
     logger.setLevel(logging.INFO)
 
 
+def db_gen_v3(path_in):
+    keys = ['forward', 'backward']
+    db = dict()
+    db['fname'] = path_in
+    for key in keys:
+        db[key] = list()
+    with open(path_in, 'r') as f:
+        lines = f.readlines()
+    lines_valid = lines[1:]
+    # logging.info(lines_valid)
+    for line in lines_valid:
+        line_lst = line.split()
+        # logging.info(line_lst)
+        db['forward'].append(float(line_lst[0]))
+        db['backward'].append(float(line_lst[1]))
+    db['seq_len'] = len(lines_valid)
+    return db
+
 def db_gen_v2(path_in):
     keys = ['time', 'address', 'status', 'temperature', 'forward', 'backward']
     db = dict()

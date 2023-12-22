@@ -11,7 +11,7 @@ import serial
 from fft import fft_wrapper
 from utils import ALARM_CNT_TH_SVM, ALARM_LOW_DIFF_TH, \
     ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
-    MAX_SEQ, SENSOR_ID, \
+    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, \
     MIN_SER_CHAR_NUM, \
     find_key_idx, \
     seq_pick_process, \
@@ -150,7 +150,9 @@ class SmokeDetector:
                     sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
                 if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
                     logging.info(('guarantee alarm !', sensor_db.cnt_alarm_guarantee))
-                    sensor_db.seq_state[-1] = 50000
+                    sensor_db.seq_state_time[-1] = 50000
+                if sensor_db.seq_backward[-1] > ALARM_GUARANTEE_SHORT_TH:
+                    sensor_db.seq_state_time[-1] = 50000
 
                 # ======================================================================================================
                 # low sensitivity logic

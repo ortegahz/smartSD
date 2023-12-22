@@ -26,7 +26,7 @@ def run(args):
         for path_src in paths_src:
             file_name = os.path.basename(path_src)
             if 'spray' in case_name:
-                continue  # skip hard case
+                continue  # spray case is useless (can not see rising stage)
             if 'tf' in case_name or 'incense' in case_name or 'spray' in case_name:
                 path_dst = os.path.join(dir_root_pos, file_name)
             else:
@@ -37,10 +37,10 @@ def run(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_in',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_SORT/',
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_SORT/',
                         type=str)
     parser.add_argument('--dir_out',
-                        default='/media/manu/data/docs/nxp/AI烟感资料整合-第一批/SONAR_TFS',
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS',
                         type=str)
     return parser.parse_args()
 

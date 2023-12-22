@@ -9,13 +9,16 @@ import numpy as np
 import serial
 
 from fft import fft_wrapper
-from utils import ALARM_CNT_TH_SVM, LEN_SEQ, MAX_SEQ, SENSOR_ID, MIN_SER_CHAR_NUM, find_key_idx, \
+from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, SENSE_LOW_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, MAX_SEQ, SENSOR_ID, \
+    MIN_SER_CHAR_NUM, \
+    find_key_idx, \
     seq_pick_process, \
     update_svm_label_file
 
 
 class SensorDB:
     def __init__(self, second_total=-1):
+        self.seq_low_sens_score = list()
         self.seq_forward_amp = list()
         self.seq_backward_amp = list()
         self.seq_state_time = list()
@@ -27,8 +30,10 @@ class SensorDB:
         self.cur_state_idx = 0
         self.cnt_alarm = 0
         self.cnt_alarm_svm = 0
+        self.cnt_alarm_guarantee = 0
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
+               cur_low_sens_score,
                second_total=-1):
         self.last_second_total = second_total
         self.seq_state_time.extend(cur_state_t)
@@ -38,6 +43,7 @@ class SensorDB:
         self.seq_backward.extend(cur_backward)
         self.seq_forward_amp.extend(cur_forward_amp)
         self.seq_backward_amp.extend(cur_backward_amp)
+        self.seq_low_sens_score.extend(cur_low_sens_score)
 
     def balance(self):
         self.seq_state_time = self.seq_state_time[-MAX_SEQ:]
@@ -47,6 +53,7 @@ class SensorDB:
         self.seq_backward = self.seq_backward[-MAX_SEQ:]
         self.seq_forward_amp = self.seq_forward_amp[-MAX_SEQ:]
         self.seq_backward_amp = self.seq_backward_amp[-MAX_SEQ:]
+        self.seq_low_sens_score = self.seq_low_sens_score[-MAX_SEQ:]
 
     def get_seq_len(self):
         assert len(self.seq_forward) == len(self.seq_backward) and len(self.seq_state) == len(self.seq_backward)
@@ -132,19 +139,46 @@ class SmokeDetector:
                 continue
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
-                seq_forward = sensor_db.seq_forward[sensor_db.cur_state_idx:]
+                # ======================================================================================================
+                # alarm guarantee
+                # ======================================================================================================
+                sensor_db.cnt_alarm_guarantee =\
+                    sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
+                if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
+                    logging.info('guarantee alarm !')
+                    sensor_db.seq_state[-1] = 50000
+
+                # ======================================================================================================
+                # low sensitivity logic
+                # ======================================================================================================
+                if not sensor_db.seq_forward_amp[-1] == 1 or \
+                        not sensor_db.seq_backward_amp[-1] == 0:
+                    logging.info('running low sensitivity logic ...')
+                    sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip ambiguous signal
+                    seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
+                    seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
+                    idx_backward_max = np.argmax(seq_backward)
+                    particle_size_eval = (seq_forward[-1] - seq_backward[-1]) / seq_backward[-1]
+                    if seq_backward[-1] > SENSE_LOW_BACK_TH and \
+                            particle_size_eval < 0.0001 and \
+                            idx_backward_max == LEN_SEQ_LOW - 1:
+                        sensor_db.seq_low_sens_score[-1] = seq_backward[-1] / SENSE_LOW_BACK_TH - particle_size_eval
+                    seq_low_sens_score_mean = np.mean(
+                        np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
+                    logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1], idx_backward_max,
+                                  particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
+                    if seq_low_sens_score_mean > 1:
+                        sensor_db.seq_state[-1] = 50000
+                    continue
+
+                # ======================================================================================================
+                # high sensitivity logic
+                # ======================================================================================================
+                seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
                 # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
-                seq_forward = np.array(seq_forward).astype(float)
                 # seq_state = np.array(seq_state).astype(float)
-                sensor_db.cnt_alarm = sensor_db.cnt_alarm + 1 if seq_forward[-1] > 254.5 else 0
-                # sensor_db.seq_state[sensor_db.cur_state_idx] = sensor_db.cnt_alarm * 4
-                logging.info(('ceil logic info', key, sensor_db.cnt_alarm, seq_forward[-1]))
-                # if sensor_db.cnt_alarm > ALARM_CNT_TH:
-                #     logging.info('sensor_db.cnt_alarm > ALARM_CNT_TH')
-                #     sensor_db.seq_state[sensor_db.cur_state_idx] = 220
-                #     _seq_state = np.array(sensor_db.seq_state)
-                #     _seq_state[sensor_db.cur_state_idx:] = 70
-                #     sensor_db.seq_state = list(_seq_state)
+
+                logging.info('running high sensitivity logic ...')
                 key_idx = find_key_idx(seq_forward)
                 if key_idx < 0:
                     logging.info('key_idx < 0')
@@ -209,14 +243,14 @@ class SmokeDetector:
         for seq_valid in buff_lst_valid:
             seq_valid_lst = seq_valid.strip().split()
             if seq_valid_lst[4] == '08':  # frame data
-                logging.info(seq_valid_lst)
+                # logging.info(seq_valid_lst)
                 # addr, forward, backward = seq_valid_lst[-4], seq_valid_lst[-6], seq_valid_lst[-2]
                 addr, val_forward, val_backward, amp_forward, amp_backward = int(seq_valid_lst[-4], 16), int(
                     seq_valid_lst[-6], 16), int(seq_valid_lst[-2], 16), (int(seq_valid_lst[-1], 16) & 0xf0) >> 4, int(
                     seq_valid_lst[-1], 16) & 0x0f
                 val_forward = val_forward / magnifications[amp_forward] * magnifications[1]
                 val_backward = val_backward / magnifications[amp_backward] * magnifications[0]
-                logging.info((addr, val_forward, val_backward, amp_forward, amp_backward))
+                # logging.info((addr, val_forward, val_backward, amp_forward, amp_backward))
                 db_key = '1' + '_' + str(addr)
                 second_total = int(time.time())
                 if db_key not in self.db.keys():
@@ -228,11 +262,12 @@ class SmokeDetector:
                     continue
                 elif second_total - self.db[db_key].last_second_total > self.interval:
                     seq_pad = [0] * (second_total - self.db[db_key].last_second_total - self.interval)
-                    self.db[db_key].update(seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, second_total)
+                    self.db[db_key].update(seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad, seq_pad,
+                                           second_total)
                 # val_forward, val_backward = self.value_preprocess(val_forward), self.value_preprocess(
                 #     val_backward)
-                self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [amp_forward * 1000],
-                                       [amp_backward * 1000],
+                self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [amp_forward],
+                                       [amp_backward], [0],
                                        second_total)
                 self.db[db_key].balance()
 
@@ -329,7 +364,10 @@ class SmokeDetector:
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_time).astype(float), label='seq_state_time')
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_state_freq).astype(float), label='seq_state_freq')
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_forward_amp).astype(float), label='seq_forward_amp')
-            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward_amp).astype(float), label='seq_backward_amp')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_backward_amp).astype(float),
+                     label='seq_backward_amp')
+            plt.plot(np.array(time_idxs), np.array(self.db[key].seq_low_sens_score).astype(float) * 5000.,
+                     label='seq_low_sens_score')
             # plt.ylim(-255, 255)
             plt.ylim(-255, 2 ** 16)
             plt.legend()

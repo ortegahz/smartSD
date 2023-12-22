@@ -356,7 +356,7 @@ class SmokeDetector:
             logging.info(key)
             self.db[key].print_db()
 
-    def plot_db(self, keys, pause_time_s=1):
+    def plot_db(self, keys, pause_time_s=1, save_plot=False, path_save='/home/manu/tmp/plt.png'):
         for key in keys:
             if key not in self.db.keys():
                 return
@@ -382,6 +382,8 @@ class SmokeDetector:
             plt.title(key)
         plt.show()
         plt.pause(pause_time_s)
+        if save_plot:
+            plt.savefig(path_save)
         plt.clf()
 
     def save_db(self, keys, save_idxes=(0, 100), save_dir='/home/manu/tmp'):

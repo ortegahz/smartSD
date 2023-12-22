@@ -9,7 +9,8 @@ import numpy as np
 import serial
 
 from fft import fft_wrapper
-from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
+from utils import ALARM_CNT_TH_SVM, ALARM_LOW_DIFF_TH, \
+    ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
     MAX_SEQ, SENSOR_ID, \
     MIN_SER_CHAR_NUM, \
     find_key_idx, \
@@ -32,6 +33,8 @@ class SensorDB:
         self.cnt_alarm = 0
         self.cnt_alarm_svm = 0
         self.cnt_alarm_guarantee = 0
+        self.alarm_logic_low_anchor_idx = 0
+        self.alarm_logic_low_probation_scores = list()
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
                cur_low_sens_score,
@@ -154,19 +157,41 @@ class SmokeDetector:
                 # ======================================================================================================
                 if not sensor_db.seq_forward_amp[-1] == 1 or \
                         not sensor_db.seq_backward_amp[-1] == 0:
-                    logging.info('running low sensitivity logic ...')
+                    # logging.info('running low sensitivity logic ...')
                     sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip ambiguous signal
-                    seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
+                    # step one evaluate anchor
+                    # seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
                     seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
                     idx_backward_max = np.argmax(seq_backward)
-                    particle_size_eval = np.absolute((seq_forward[-1] - seq_backward[-1]) / seq_backward[-1])
-                    if particle_size_eval < 0.3 and idx_backward_max == LEN_SEQ_LOW - 1:
-                        sensor_db.seq_low_sens_score[-1] = 1. - particle_size_eval
-                    seq_low_sens_score_mean = np.mean(
-                        np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
-                    logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
-                                  particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
-                    if seq_low_sens_score_mean > 1:
+                    # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
+                    #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
+                    if idx_backward_max == LEN_SEQ_LOW - 1:
+                        sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = 5000 \
+                            if sensor_db.get_seq_len() - 1 - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW \
+                            else 10000
+                        sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1
+                        sensor_db.alarm_logic_low_probation_scores = list()  # reset
+                    sensor_db.alarm_logic_low_anchor_idx = 0 \
+                        if sensor_db.alarm_logic_low_anchor_idx < sensor_db.get_seq_len() - LEN_SEQ_LOW \
+                        else sensor_db.alarm_logic_low_anchor_idx
+                    sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = 10000
+                    if sensor_db.alarm_logic_low_anchor_idx == 0 or \
+                            sensor_db.get_seq_len() - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW:
+                        continue
+                    for i in range(int(LEN_SEQ_LOW / 4 * 3)):
+                        sensor_db.seq_state[-i] = 3000
+                    seq_backward_diff = np.diff(seq_backward)
+                    seq_backward_diff_valid = np.absolute(seq_backward_diff[int(-LEN_SEQ_LOW / 4 * 3):])
+                    seq_backward_diff_valid_mean = np.mean(seq_backward_diff_valid)
+                    logging.info((seq_backward_diff_valid, seq_backward_diff_valid_mean))
+                    # particle_size_eval = np.absolute((seq_forward[-1] - seq_backward[-1]) / seq_backward[-1])
+                    # if particle_size_eval < 0.3 and idx_backward_max == LEN_SEQ_LOW - 1:
+                    #     sensor_db.seq_low_sens_score[-1] = 1. - particle_size_eval
+                    # seq_low_sens_score_mean = np.mean(
+                    #     np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
+                    # logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
+                    #               particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
+                    if seq_backward_diff_valid_mean < ALARM_LOW_DIFF_TH:
                         sensor_db.seq_state[-1] = 50000
                     continue
 

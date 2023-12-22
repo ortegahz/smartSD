@@ -8,7 +8,7 @@ import xlrd
 
 GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
-LEN_SEQ_LOW = 8
+LEN_SEQ_LOW = 16
 
 LEN_SEQ = 32
 LEN_OVERLAP = 16
@@ -18,6 +18,7 @@ MIN_SER_CHAR_NUM = 40
 ALARM_CNT_TH = 16
 ALARM_CNT_TH_SVM = 10
 ALARM_CNT_GUARANTEE_TH = 16
+ALARM_LOW_DIFF_TH = 1000
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):

@@ -9,7 +9,8 @@ import numpy as np
 import serial
 
 from fft import fft_wrapper
-from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, SENSE_LOW_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, MAX_SEQ, SENSOR_ID, \
+from utils import ALARM_CNT_TH_SVM, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, SENSE_LOW_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
+    MAX_SEQ, SENSOR_ID, \
     MIN_SER_CHAR_NUM, \
     find_key_idx, \
     seq_pick_process, \
@@ -135,17 +136,17 @@ class SmokeDetector:
             sensor_db = self.db[key]
             # logging.info((key, sensor_db.cur_state_idx, sensor_db.get_seq_len()))
             if sensor_db.get_seq_len() <= LEN_SEQ:
-                logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
+                # logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
                 continue
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
                 # ======================================================================================================
                 # alarm guarantee
                 # ======================================================================================================
-                sensor_db.cnt_alarm_guarantee =\
+                sensor_db.cnt_alarm_guarantee = \
                     sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
                 if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
-                    logging.info('guarantee alarm !')
+                    logging.info(('guarantee alarm !', sensor_db.cnt_alarm_guarantee))
                     sensor_db.seq_state[-1] = 50000
 
                 # ======================================================================================================
@@ -158,14 +159,12 @@ class SmokeDetector:
                     seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
                     seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
                     idx_backward_max = np.argmax(seq_backward)
-                    particle_size_eval = (seq_forward[-1] - seq_backward[-1]) / seq_backward[-1]
-                    if seq_backward[-1] > SENSE_LOW_BACK_TH and \
-                            particle_size_eval < 0.0001 and \
-                            idx_backward_max == LEN_SEQ_LOW - 1:
-                        sensor_db.seq_low_sens_score[-1] = seq_backward[-1] / SENSE_LOW_BACK_TH - particle_size_eval
+                    particle_size_eval = np.absolute((seq_forward[-1] - seq_backward[-1]) / seq_backward[-1])
+                    if particle_size_eval < 0.3 and idx_backward_max == LEN_SEQ_LOW - 1:
+                        sensor_db.seq_low_sens_score[-1] = 1. - particle_size_eval
                     seq_low_sens_score_mean = np.mean(
                         np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
-                    logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1], idx_backward_max,
+                    logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
                                   particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
                     if seq_low_sens_score_mean > 1:
                         sensor_db.seq_state[-1] = 50000
@@ -177,7 +176,6 @@ class SmokeDetector:
                 seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
                 # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
                 # seq_state = np.array(seq_state).astype(float)
-
                 logging.info('running high sensitivity logic ...')
                 key_idx = find_key_idx(seq_forward)
                 if key_idx < 0:
@@ -250,7 +248,7 @@ class SmokeDetector:
                     seq_valid_lst[-1], 16) & 0x0f
                 val_forward = val_forward / magnifications[amp_forward] * magnifications[1]
                 val_backward = val_backward / magnifications[amp_backward] * magnifications[0]
-                # logging.info((addr, val_forward, val_backward, amp_forward, amp_backward))
+                logging.info((addr, val_forward, val_backward, amp_forward, amp_backward))
                 db_key = '1' + '_' + str(addr)
                 second_total = int(time.time())
                 if db_key not in self.db.keys():
@@ -369,9 +367,29 @@ class SmokeDetector:
             plt.plot(np.array(time_idxs), np.array(self.db[key].seq_low_sens_score).astype(float) * 5000.,
                      label='seq_low_sens_score')
             # plt.ylim(-255, 255)
-            plt.ylim(-255, 2 ** 16)
+            # plt.ylim(-255, 2 ** 16)
+            plt.yticks(np.arange(0, 2 ** 16, 5000))
             plt.legend()
+            plt.grid()
             plt.title(key)
         plt.show()
         plt.pause(pause_time_s)
         plt.clf()
+
+    def save_db(self, keys, save_idxes=(0, 100), save_dir='/home/manu/tmp'):
+        for key in keys:
+            if key not in self.db.keys():
+                return
+        for key in keys:
+            save_path = os.path.join(save_dir, key + '.txt')
+            seq_len = self.db[key].get_seq_len()
+            seq_len_save = save_idxes[-1] - save_idxes[0]
+            assert seq_len_save <= seq_len
+            with open(save_path, 'w') as f:
+                f.write('forward backward \n')
+                for i in range(seq_len_save):
+                    val_forward = np.array(self.db[key].seq_forward[i + save_idxes[0]]).astype('float')
+                    val_backward = np.array(self.db[key].seq_backward[i + save_idxes[0]]).astype('float')
+                    f.write(f'{val_forward} {val_backward} \n')
+
+

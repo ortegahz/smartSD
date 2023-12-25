@@ -20,6 +20,7 @@ ALARM_CNT_TH_SVM = 10
 ALARM_CNT_GUARANTEE_TH = 16
 ALARM_GUARANTEE_SHORT_TH = 35000
 ALARM_LOW_DIFF_TH = 1000
+ALARM_LOW_TH = 256
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):

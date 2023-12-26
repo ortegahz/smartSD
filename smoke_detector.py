@@ -195,14 +195,14 @@ class SmokeDetector:
                     #     np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
                     # logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
                     #               particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
-                    seq_diff_pre = np.diff(seq_forward_pre)
+                    seq_diff_pre = np.diff(seq_forward_pre[-LEN_SEQ_LOW:int(-LEN_SEQ_LOW / 2)])
                     seq_diff_pre_valid = seq_diff_pre[seq_diff_pre < 0.]
                     seq_diff_pre_valid_mean = np.mean(seq_diff_pre_valid) if len(seq_diff_pre_valid) > 0 else 0
                     idx_valid_s = int(-LEN_SEQ_LOW / 4 * 3)
                     seq_diff = np.diff(seq_forward[idx_valid_s:])
                     seq_diff_valid = seq_diff[seq_diff > 0.]
                     seq_diff_valid_mean = np.mean(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
-                    alarm_low_diff_th_auto = sensor_db.seq_forward[sensor_db.alarm_logic_low_anchor_idx] / 25.
+                    alarm_low_diff_th_auto = sensor_db.seq_forward[sensor_db.alarm_logic_low_anchor_idx] / 20.
                     alarm_low_diff_th_auto = alarm_low_diff_th_auto \
                         if alarm_low_diff_th_auto > ALARM_LOW_DIFF_TH else ALARM_LOW_DIFF_TH
                     seq_diff_valid_mean_total = seq_diff_valid_mean - seq_diff_pre_valid_mean

@@ -163,6 +163,7 @@ class SmokeDetector:
                     # logging.info('running low sensitivity logic ...')
                     sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip ambiguous signal
                     # step one evaluate anchor
+                    seq_forward_pre = np.array(sensor_db.seq_forward[-2 * LEN_SEQ_LOW:-LEN_SEQ_LOW]).astype(float)
                     seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
                     seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
                     idx_backward_max = np.argmax(seq_backward)
@@ -194,14 +195,23 @@ class SmokeDetector:
                     #     np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
                     # logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
                     #               particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
-                    idx_valid_s = -LEN_SEQ_LOW
+                    seq_diff_pre = np.diff(seq_forward_pre)
+                    seq_diff_pre_valid = seq_diff_pre[seq_diff_pre < 0.]
+                    seq_diff_pre_valid_mean = np.mean(seq_diff_pre_valid) if len(seq_diff_pre_valid) > 0 else 0
+                    idx_valid_s = int(-LEN_SEQ_LOW / 4 * 3)
                     seq_diff = np.diff(seq_forward[idx_valid_s:])
                     seq_diff_valid = seq_diff[seq_diff > 0.]
-                    seq_diff_valid_mean = np.mean(seq_diff_valid)
-                    logging.info((seq_forward[idx_valid_s:], seq_diff, seq_diff_valid_mean))
+                    seq_diff_valid_mean = np.mean(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
+                    alarm_low_diff_th_auto = sensor_db.seq_forward[sensor_db.alarm_logic_low_anchor_idx] / 25.
+                    alarm_low_diff_th_auto = alarm_low_diff_th_auto \
+                        if alarm_low_diff_th_auto > ALARM_LOW_DIFF_TH else ALARM_LOW_DIFF_TH
+                    seq_diff_valid_mean_total = seq_diff_valid_mean - seq_diff_pre_valid_mean
+                    logging.info((seq_forward[idx_valid_s:], seq_diff,
+                                  seq_diff_pre_valid_mean, seq_diff_valid_mean,
+                                  seq_diff_valid_mean_total, alarm_low_diff_th_auto))
                     for i in range(-idx_valid_s):
                         sensor_db.seq_state[-i] = 3000
-                    if seq_diff_valid_mean < ALARM_LOW_DIFF_TH:
+                    if seq_diff_valid_mean_total < alarm_low_diff_th_auto:
                         sensor_db.seq_state[-1] = 50000
                     continue
 

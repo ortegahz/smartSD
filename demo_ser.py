@@ -9,11 +9,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--addrs_sensor', default=[f'1_{1}', f'1_{5}'])
     parser.add_argument('--addrs_sensor', default=[f'1_{2}'])
-    parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
-    parser.add_argument('--dev_ser', default='/dev/ttyUSB0')
-    # parser.add_argument('--dir_root_libsvm', default=r'C:\Users\admin\Desktop\demo\libsvm')
-    # parser.add_argument('--dev_ser', default='COM3')
-    parser.add_argument('--sample_idxes', default=[0, 100])
+    # parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
+    # parser.add_argument('--dev_ser', default='/dev/ttyUSB0')
+    # parser.add_argument('--sample_idxes', default=[0, 100])
+    parser.add_argument('--dir_root_libsvm', default=r'C:\Users\admin\Desktop\demo\libsvm')
+    parser.add_argument('--dev_ser', default='COM3')
+    parser.add_argument('--sample_idxes', default=[])
     return parser.parse_args()
 
 

@@ -133,12 +133,15 @@ class SmokeDetector:
 
     def _low_sensitivity_logic(self, sensor_db):
         # logging.info('running low sensitivity logic ...')
-        sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip ambiguous signal
+        # sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip ambiguous signal
         # step one evaluate anchor
-        seq_forward_pre = np.array(sensor_db.seq_forward[-2 * LEN_SEQ_LOW:-LEN_SEQ_LOW]).astype(float)
+        # seq_forward_pre = np.array(sensor_db.seq_forward[-2 * LEN_SEQ_LOW:-LEN_SEQ_LOW]).astype(float)
         seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
         seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
         idx_backward_max = np.argmax(seq_backward)
+        if seq_backward[-1] < 20:
+            sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
+            return
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
         if idx_backward_max == LEN_SEQ_LOW - 1:
@@ -153,7 +156,10 @@ class SmokeDetector:
         sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 5
         if sensor_db.alarm_logic_low_anchor_idx == 0 or \
                 sensor_db.get_seq_len() - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW:
+            # sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
             return
+        sensor_db.cur_state_idx = sensor_db.alarm_logic_low_anchor_idx - 2 * LEN_SEQ  # seq for svm models
+        sensor_db.cur_state_idx = sensor_db.cur_state_idx if sensor_db.cur_state_idx > 0 else 0
         # idx_valid_s = int(-LEN_SEQ_LOW / 2)
         # seq_backward_diff = np.diff(seq_backward)
         # seq_backward_diff = np.diff(seq_forward)
@@ -167,9 +173,10 @@ class SmokeDetector:
         #     np.array(sensor_db.seq_low_sens_score[-LEN_SEQ_LOW:]).astype(float))
         # logging.info(('lsl', key, sensor_db.get_seq_len() - 1, seq_backward[-1],
         #               particle_size_eval, sensor_db.seq_low_sens_score[-1], seq_low_sens_score_mean))
-        seq_diff_pre = np.diff(seq_forward_pre[-LEN_SEQ_LOW:int(-LEN_SEQ_LOW / 2)])
-        seq_diff_pre_valid = seq_diff_pre[seq_diff_pre < 0.]
-        seq_diff_pre_valid_mean = np.mean(seq_diff_pre_valid) if len(seq_diff_pre_valid) > 0 else 0
+        # seq_diff_pre = np.diff(seq_forward_pre[-LEN_SEQ_LOW:int(-LEN_SEQ_LOW / 2)])
+        # seq_diff_pre_valid = seq_diff_pre[seq_diff_pre < 0.]
+        # seq_diff_pre_valid_mean = np.mean(seq_diff_pre_valid) if len(seq_diff_pre_valid) > 0 else 0
+        seq_diff_pre_valid_mean = 0.
         idx_valid_s = int(-LEN_SEQ_LOW / 4 * 3)
         seq_diff = np.diff(seq_forward[idx_valid_s:])
         seq_diff_valid = seq_diff[seq_diff > 0.]
@@ -183,48 +190,54 @@ class SmokeDetector:
                       seq_diff_valid_mean_total, alarm_low_diff_th_auto))
         for i in range(-idx_valid_s):
             sensor_db.seq_state[-i] = DEBUG_ALARM_INDICATOR_VAL / 20
+        for i in range(sensor_db.cur_state_idx, sensor_db.alarm_logic_low_anchor_idx):
+            sensor_db.seq_state_freq[i] = DEBUG_ALARM_INDICATOR_VAL / 20
         if seq_diff_valid_mean_total < alarm_low_diff_th_auto:
             sensor_db.seq_state[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     def _high_sensitivity_logic(self, sensor_db, dir_root_svm, key=f'1_{1}'):
-        seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
-        # seq_forward[seq_forward > 255] = 255
-        # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
-        # seq_state = np.array(seq_state).astype(float)
-        # logging.info('running high sensitivity logic ...')
-        key_idx = find_key_idx(seq_forward)
-        if key_idx < 0:
-            logging.info('key_idx < 0')
-            # sensor_db.cur_state_idx = sensor_db.get_seq_len()
-            # break
+        while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
+            seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
+            seq_forward_max_val = np.max(seq_forward) if np.max(seq_forward) > 255 else 255
+            seq_forward *= 255. / seq_forward_max_val
+            # seq_forward[seq_forward > 255] = 255
+            # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
+            # seq_state = np.array(seq_state).astype(float)
+            # logging.info('running high sensitivity logic ...')
+            key_idx = find_key_idx(seq_forward)
+            if key_idx < 0:
+                logging.info('key_idx < 0')
+                # sensor_db.cur_state_idx = sensor_db.get_seq_len()
+                # break
+                sensor_db.cur_state_idx += 1
+                # sensor_db.cnt_alarm = 0  # counter reset
+                sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
+                return
+            seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
+            res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
+            seq_pick_fft = fft_wrapper(seq_pick)
+            res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
+            weight = 0.5
+            score = res * weight + res_freq * (1 - weight)
+            # score = 1
+            sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * 50
+            sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = res_freq * 100
+            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 150
+            # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
+            sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
+            logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
+            if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
+                sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = DEBUG_ALARM_INDICATOR_VAL
+            #     _seq_state = np.array(sensor_db.seq_state)
+            #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
+            #     sensor_db.seq_state = list(_seq_state)
+            # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
+            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
+            # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
             sensor_db.cur_state_idx += 1
-            # sensor_db.cnt_alarm = 0  # counter reset
-            sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
-            return
-        seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-        res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
-        seq_pick_fft = fft_wrapper(seq_pick)
-        res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
-        weight = 0.5
-        score = res * weight + res_freq * (1 - weight)
-        # score = 1
-        sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * 50
-        sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = res_freq * 100
-        sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 150
-        # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
-        sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
-        logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
-        if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
-            sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = DEBUG_ALARM_INDICATOR_VAL
-        #     _seq_state = np.array(sensor_db.seq_state)
-        #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
-        #     sensor_db.seq_state = list(_seq_state)
-        # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
-        # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
-        # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
-        sensor_db.cur_state_idx += 1
 
-    def _alarm_guarantee_logic(self, sensor_db):
+    @staticmethod
+    def _alarm_guarantee_logic(sensor_db):
         sensor_db.cnt_alarm_guarantee = \
             sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
         if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
@@ -244,16 +257,10 @@ class SmokeDetector:
                 # logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
                 continue
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
-            while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
-                # alarm guarantee
-                self._alarm_guarantee_logic(sensor_db)
-
-                # if not sensor_db.seq_forward_amp[-1] == 1 or \
-                #         not sensor_db.seq_backward_amp[-1] == 0:
-                if sensor_db.seq_backward[-1] > ALARM_LOW_TH:
-                    self._low_sensitivity_logic(sensor_db)
-                else:
-                    self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
+            # while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
+            self._alarm_guarantee_logic(sensor_db)
+            self._low_sensitivity_logic(sensor_db)
+            self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
 
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):

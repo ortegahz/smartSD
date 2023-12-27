@@ -74,7 +74,7 @@ def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
         mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
         # if mean > th_mean or seq[idx_end-1] > 220:
         logging.info(f'seq[idx_end - 1] - seq[key_idx] -> {seq[idx_end - 1] - seq[key_idx]}')
-        if seq[idx_end - 1] - seq[key_idx] > 20:
+        if seq[idx_end - 1] - seq[key_idx] > 5:
             flag_valid = True
             logging.info(f'filter two found key_idx -> {key_idx}')
             break

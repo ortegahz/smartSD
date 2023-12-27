@@ -22,9 +22,11 @@ def main():
     logging.info(args)
     smoke_detector = SmokeDetector()
     db = db_gen(args.path_in)
-    smoke_detector.update_db_v1(db, args.key_choose_forward, args.key_choose_backward, db_key=args.addrs_sensor[0])
-    smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
-    smoke_detector.plot_db(args.addrs_sensor, pause_time_s=1024)
+    for i in range(db['seq_len_max']):
+        smoke_detector.update_db_v1(db, i, args.key_choose_forward,
+                                    args.key_choose_backward, db_key=args.addrs_sensor[0])
+        smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
+        smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.1)
 
 
 if __name__ == '__main__':

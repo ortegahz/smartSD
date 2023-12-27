@@ -21,6 +21,7 @@ ALARM_CNT_GUARANTEE_TH = 16
 ALARM_GUARANTEE_SHORT_TH = 35000
 ALARM_LOW_DIFF_TH = 800
 ALARM_LOW_TH = 256
+DEBUG_ALARM_INDICATOR_VAL = 255
 
 
 def update_svm_label_file(seq_pick, path_out, subset='neg'):
@@ -227,14 +228,16 @@ def db_gen(path_in):
 
     db = dict()
     db['fname'] = file_name
+    seq_len_max = 0
     for i, key in enumerate(keys):
         db[key.lower()] = [0] * LEN_SEQ + obj_sheet_pick.col_values(i)[1:]
+        seq_len_max = len(db[key.lower()]) if len(db[key.lower()]) > seq_len_max else seq_len_max
         # logging.info(obj_sheet_pick.col_values(i)[1:])
 
     # idx_alarm = db['Alarm'].index('Alarm!')
     # logging.info(idx_alarm)
     # db['Alarm'] = [0] * idx_alarm + [255] * (len(db['Time']) - idx_alarm)
-
+    db['seq_len_max'] = seq_len_max
     return db
 
 

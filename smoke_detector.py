@@ -224,6 +224,15 @@ class SmokeDetector:
         # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
         sensor_db.cur_state_idx += 1
 
+    def _alarm_guarantee_logic(self, sensor_db):
+        sensor_db.cnt_alarm_guarantee = \
+            sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
+        if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
+            logging.info(('guarantee alarm !', sensor_db.cnt_alarm_guarantee))
+            sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
+        if sensor_db.seq_backward[-1] > ALARM_GUARANTEE_SHORT_TH:
+            sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
+
     def infer_db(self, keys, dir_root_svm):
         for key in keys:
             if key not in self.db.keys():
@@ -236,16 +245,8 @@ class SmokeDetector:
                 continue
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
-                # ======================================================================================================
                 # alarm guarantee
-                # ======================================================================================================
-                sensor_db.cnt_alarm_guarantee = \
-                    sensor_db.cnt_alarm_guarantee + 1 if sensor_db.seq_backward[-1] > GUARANTEE_BACK_TH else 0
-                if sensor_db.cnt_alarm_guarantee > ALARM_CNT_GUARANTEE_TH:
-                    logging.info(('guarantee alarm !', sensor_db.cnt_alarm_guarantee))
-                    sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
-                if sensor_db.seq_backward[-1] > ALARM_GUARANTEE_SHORT_TH:
-                    sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
+                self._alarm_guarantee_logic(sensor_db)
 
                 # if not sensor_db.seq_forward_amp[-1] == 1 or \
                 #         not sensor_db.seq_backward_amp[-1] == 0:

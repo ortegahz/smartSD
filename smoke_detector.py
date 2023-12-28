@@ -155,7 +155,7 @@ class SmokeDetector:
         sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 5
         if sensor_db.alarm_logic_low_anchor_idx == 0 or \
                 sensor_db.get_seq_len() - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW:
-            # sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
+            sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
             return
         sensor_db.cur_state_idx = sensor_db.alarm_logic_low_anchor_idx - 2 * LEN_SEQ  # seq for svm models
         sensor_db.cur_state_idx = sensor_db.cur_state_idx if sensor_db.cur_state_idx > 0 else 0
@@ -197,6 +197,7 @@ class SmokeDetector:
             sensor_db.seq_state[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     def _high_sensitivity_logic(self, sensor_db, dir_root_svm, key=f'1_{1}'):
+        # logging.info('sensor_db.cnt_alarm_svm = 0')
         sensor_db.cnt_alarm_svm = 0.  # not take history wins results into count
         while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
@@ -231,7 +232,7 @@ class SmokeDetector:
             # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
             sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
             # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
-            logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
+            logging.info(('svm calc info', key, res, res_freq, score, sensor_db.cnt_alarm_svm))
             if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
                 sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = DEBUG_ALARM_INDICATOR_VAL
                 # sensor_db.cnt_alarm_svm = 0

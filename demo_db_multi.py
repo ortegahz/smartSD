@@ -9,7 +9,7 @@ from utils import set_logging, db_gen, make_dirs
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/pos')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/neg')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--key_choose_forward', default='ADC_Forward')
     parser.add_argument('--key_choose_backward', default='ADC_Backward')
@@ -25,7 +25,8 @@ def main():
     smoke_detector = SmokeDetector()
     make_dirs(args.dir_plot_save)
     paths_in = glob.glob(os.path.join(args.dir_in, '*'))
-    for path_in in paths_in:
+    for j, path_in in enumerate(paths_in):
+        logging.info((j, len(paths_in), path_in))
         db = db_gen(path_in)
         for i in range(db['seq_len_max']):
             smoke_detector.update_db_v1(db, i, args.key_choose_forward,

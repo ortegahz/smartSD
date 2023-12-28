@@ -11,8 +11,7 @@ import serial
 from fft import fft_wrapper
 from utils import ALARM_CNT_TH_SVM, ALARM_LOW_DIFF_TH, \
     ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
-    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, ALARM_LOW_TH, \
-    MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
+    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
     find_key_idx, \
     seq_pick_process, \
     update_svm_label_file
@@ -191,11 +190,14 @@ class SmokeDetector:
         for i in range(-idx_valid_s):
             sensor_db.seq_state[-i] = DEBUG_ALARM_INDICATOR_VAL / 20
         for i in range(sensor_db.cur_state_idx, sensor_db.alarm_logic_low_anchor_idx):
-            sensor_db.seq_state_freq[i] = DEBUG_ALARM_INDICATOR_VAL / 20
+            # sensor_db.seq_state_freq[i] = DEBUG_ALARM_INDICATOR_VAL / 20
+            sensor_db.seq_state_freq[i] = sensor_db.seq_state_freq[i] \
+                if sensor_db.seq_state_freq[i] == DEBUG_ALARM_INDICATOR_VAL else DEBUG_ALARM_INDICATOR_VAL / 20
         if seq_diff_valid_mean_total < alarm_low_diff_th_auto:
             sensor_db.seq_state[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     def _high_sensitivity_logic(self, sensor_db, dir_root_svm, key=f'1_{1}'):
+        sensor_db.cnt_alarm_svm = 0.  # not take history wins results into count
         while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
             seq_forward_max_val = np.max(seq_forward) if np.max(seq_forward) > 255 else 255
@@ -212,7 +214,7 @@ class SmokeDetector:
                 sensor_db.cur_state_idx += 1
                 # sensor_db.cnt_alarm = 0  # counter reset
                 sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
-                return
+                continue
             seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
             res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
             seq_pick_fft = fft_wrapper(seq_pick)
@@ -221,13 +223,18 @@ class SmokeDetector:
             score = res * weight + res_freq * (1 - weight)
             # score = 1
             sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * 50
-            sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = res_freq * 100
+            sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = \
+                sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] \
+                    if sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] == DEBUG_ALARM_INDICATOR_VAL \
+                    else res_freq * 100
             sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 150
             # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
             sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
+            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
             logging.info(('svm calc info', key, sensor_db.cnt_alarm_svm, res, res_freq, score))
             if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
                 sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = DEBUG_ALARM_INDICATOR_VAL
+                # sensor_db.cnt_alarm_svm = 0
             #     _seq_state = np.array(sensor_db.seq_state)
             #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
             #     sensor_db.seq_state = list(_seq_state)
@@ -408,7 +415,10 @@ class SmokeDetector:
             logging.info(key)
             self.db[key].print_db()
 
-    def plot_db(self, keys, pause_time_s=1, save_plot=False, path_save='/home/manu/tmp/plt.png'):
+    def clear_db(self):
+        self.db.clear()
+
+    def plot_db(self, keys, pause_time_s=1, save_plot=False, path_save='/home/manu/tmp/plt.png', title_info=''):
         for key in keys:
             if key not in self.db.keys():
                 return
@@ -432,7 +442,7 @@ class SmokeDetector:
             # plt.yticks(np.arange(0, 3000, 100))
             plt.legend()
             plt.grid()
-            plt.title(key)
+            plt.title(key + '_' + title_info)
         plt.show()
         plt.pause(pause_time_s)
         if save_plot:

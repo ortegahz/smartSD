@@ -223,12 +223,12 @@ class SmokeDetector:
             weight = 0.5
             score = res * weight + res_freq * (1 - weight)
             # score = 1
-            sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * 50
+            sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * DEBUG_ALARM_INDICATOR_VAL / 4
             sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = \
                 sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] \
                     if sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] == DEBUG_ALARM_INDICATOR_VAL \
-                    else res_freq * 100
-            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * 150
+                    else res_freq * DEBUG_ALARM_INDICATOR_VAL / 2
+            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * DEBUG_ALARM_INDICATOR_VAL / 4 * 3
             # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
             sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
             # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
@@ -437,10 +437,10 @@ class SmokeDetector:
                      label='seq_backward_amp')
             # plt.plot(np.array(time_idxs), np.array(self.db[key].seq_low_sens_score).astype(float) * 5000.,
             #          label='seq_low_sens_score')
-            plt.ylim(-255, 255)
+            # plt.ylim(-255, 255)
             # plt.ylim(-255, 2 ** 16)
             # plt.yticks(np.arange(0, 2 ** 16, 5000))
-            # plt.yticks(np.arange(0, 3000, 100))
+            plt.yticks(np.arange(0, DEBUG_ALARM_INDICATOR_VAL, DEBUG_ALARM_INDICATOR_VAL / 10))
             plt.legend()
             plt.grid()
             plt.title(key + '_' + title_info)

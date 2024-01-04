@@ -1,8 +1,8 @@
 import argparse
 import logging
 
-from smoke_detector import SmokeDetector
-from utils import set_logging, db_gen_v3
+from core.smoke_detector import SmokeDetector
+from utils.utils import set_logging, db_gen_v3
 
 
 def parse_args():

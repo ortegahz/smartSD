@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from utils.utils import set_logging, make_dirs
+from utils.utils import make_dirs, set_logging
 
 
 def run(args):
@@ -20,18 +20,14 @@ def run(args):
         logging.info(sub_dir_case)
         case_name = os.path.basename(sub_dir_case)
         logging.info(case_name)
-        dir_case_data = os.path.join(sub_dir_case, 'Product')
-        logging.info(dir_case_data)
-        assert os.path.exists(dir_case_data)
-        paths_src = glob.glob(os.path.join(dir_case_data, '*'))
+        paths_src = glob.glob(os.path.join(sub_dir_case, '*'))
         logging.info(paths_src)
-        case_name = case_name.lower()
         for path_src in paths_src:
             logging.info(path_src)
             assert path_src[-4:] == '.txt'
             file_name = os.path.basename(path_src)
             file_name_save = case_name + '_' + file_name
-            if 'tf' in case_name:
+            if '线香' in case_name or '香烟' in case_name or '气溶胶' in case_name:
                 path_dst = os.path.join(dir_root_pos, file_name_save)
             else:
                 path_dst = os.path.join(dir_root_neg, file_name_save)
@@ -40,8 +36,8 @@ def run(args):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/first_batch')
-    parser.add_argument('--dir_out', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V2')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202312')
+    parser.add_argument('--dir_out', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V3')
     return parser.parse_args()
 
 

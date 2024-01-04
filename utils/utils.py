@@ -24,6 +24,9 @@ ALARM_LOW_TH = 256
 DEBUG_ALARM_INDICATOR_VAL = 2 ** 16
 
 
+# SVM_LEN_SEQ_FUTURE = 16
+
+
 def update_svm_label_file(seq_pick, path_out, subset='neg'):
     idx_feat = 0
     with open(path_out, 'a') as f:
@@ -51,6 +54,31 @@ def seq_pick_process(feats, key_idx, shift_rate_left=1 / 2, db=None, key_debug='
         seq_pick = np.append(seq_pick, pad)
     assert len(seq_pick) == LEN_SEQ
     return seq_pick, idx_s, idx_e
+
+
+def seq_pick_process_future(seq, anchor_idx):
+    idx_s = anchor_idx + 1
+    idx_e = len(seq) if idx_s + LEN_SEQ_LOW > len(seq) else int(idx_s + LEN_SEQ_LOW)
+    seq_pick = seq[idx_s:idx_e]
+    if len(seq_pick) < LEN_SEQ_LOW:
+        pad = [seq_pick[-1]] * (LEN_SEQ_LOW - len(seq_pick))  # pad last seq val
+        seq_pick = np.append(seq_pick, pad)
+    assert len(seq_pick) == LEN_SEQ_LOW
+    return seq_pick, idx_s, idx_e
+
+
+def find_anchor_idxes(seq, last_val_th=256):
+    anchor_idxes = list()
+    anchor_idx, anchor_val, cnt = -1, -1, 0
+    for i, val in enumerate(seq):
+        if cnt >= LEN_SEQ_LOW and val > last_val_th:
+            anchor_idxes.append(anchor_idx)
+            anchor_idx, anchor_val, cnt = -1, -1, 0
+        elif val >= anchor_val:
+            anchor_idx, anchor_val, cnt = i, val, 0
+        else:
+            cnt += 1
+    return anchor_idxes
 
 
 def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
@@ -109,8 +137,10 @@ def db_gen_v3(path_in):
         # logging.info(line_lst)
         db['forward'].append(float(line_lst[0]))
         db['backward'].append(float(line_lst[1]))
+    db['state'] = np.zeros_like(np.array(db['forward']).astype('float'))
     db['seq_len'] = len(lines_valid)
     return db
+
 
 def db_gen_v2(path_in):
     keys = ['time', 'address', 'status', 'temperature', 'forward', 'backward']
@@ -239,6 +269,24 @@ def db_gen(path_in):
     # db['Alarm'] = [0] * idx_alarm + [255] * (len(db['Time']) - idx_alarm)
     db['seq_len_max'] = seq_len_max
     return db
+
+
+def plot_db_v3(db, pause_time_s=1, case='', dir_save='', idx_save=0):
+    plt.ion()
+    time_idxs = range(len(db['forward']))
+    plt.title(db['fname'] + f' <{case}>')
+    for key in db.keys():
+        if key == 'fname' or key == 'seq_len':
+            continue
+        plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
+        plt.ylim(0, 2 ** 16)
+        plt.legend()
+    plt.show()
+    if dir_save:
+        fn_base, _ = os.path.basename(db['fname']).split('.')
+        plt.savefig(os.path.join(dir_save, f'{idx_save}_' + fn_base))
+    plt.pause(pause_time_s)
+    plt.clf()
 
 
 def plot_db_v2(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):

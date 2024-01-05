@@ -1,8 +1,8 @@
 import argparse
 import logging
 
-from smoke_detector import SmokeDetector
-from utils import set_logging
+from core.smoke_detector import SmokeDetector
+from utils.utils import set_logging
 
 
 def parse_args():
@@ -12,9 +12,11 @@ def parse_args():
     # parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     # parser.add_argument('--dev_ser', default='/dev/ttyUSB0')
     # parser.add_argument('--save_dir', default='/home/manu/tmp')
-    parser.add_argument('--dir_root_libsvm', default=r'C:\Users\admin\Desktop\demo\libsvm')
     parser.add_argument('--dev_ser', default='COM3')
-    parser.add_argument('--save_dir', default=r'C:\Users\EOS1\Desktop\data')
+    # parser.add_argument('--dir_root_libsvm', default=r'C:\Users\admin\Desktop\demo\libsvm')
+    # parser.add_argument('--save_dir', default=r'C:\Users\EOS1\Desktop\data')
+    parser.add_argument('--dir_root_libsvm', default=r'C:\Users\zxthz\Desktop\demo\libsvm')
+    parser.add_argument('--save_dir', default=r'C:\Users\zxthz\Desktop\data')
     # parser.add_argument('--sample_idxes', default=[])
     parser.add_argument('--sample_idxes', default=[0, 100])
     return parser.parse_args()

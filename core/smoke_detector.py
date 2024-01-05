@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import serial
 
-from fft import fft_wrapper
-from utils import ALARM_CNT_TH_SVM, ALARM_LOW_DIFF_TH, \
+from demos.demo_fft import fft_wrapper
+from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_DIFF_TH, ALARM_LOW_TH, \
     ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, \
     MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
     find_key_idx, \
@@ -105,7 +105,7 @@ class SmokeDetector:
         return int(lines[0].strip())
 
     @staticmethod
-    def svm_infer(seq, path_label='./rtsvm', dir_libsvm='/home/manu/nfs/libsvm'):
+    def svm_infer_time(seq, path_label='./rtsvm_time', dir_libsvm='/home/manu/nfs/libsvm'):
         is_win32 = (sys.platform == 'win32')
         if is_win32:
             svmscale_exe = os.path.join(dir_libsvm, 'windows', 'svm-scale.exe')
@@ -113,8 +113,8 @@ class SmokeDetector:
         else:
             svmscale_exe = os.path.join(dir_libsvm, 'svm-scale')
             svmpredict_exe = os.path.join(dir_libsvm, 'svm-predict')
-        range_file = os.path.join(dir_libsvm, 'tools', 'smartsd.range')
-        model_file = os.path.join(dir_libsvm, 'tools', 'smartsd.model')
+        range_file = os.path.join(dir_libsvm, 'tools', 'smartsd_time.range')
+        model_file = os.path.join(dir_libsvm, 'tools', 'smartsd_time.model')
         test_pathname = path_label
         scaled_test_file = path_label + '.scale'
         predict_test_file = path_label + '.predict'
@@ -138,8 +138,8 @@ class SmokeDetector:
         seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
         seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
         idx_backward_max = np.argmax(seq_backward)
-        if seq_backward[-1] < 20:
-            sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
+        if seq_backward[-1] < ALARM_LOW_TH:
+            # sensor_db.cur_state_idx = sensor_db.get_seq_len() - LEN_SEQ + 1  # skip svm logic
             return
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
@@ -217,7 +217,7 @@ class SmokeDetector:
                 sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
                 continue
             seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-            res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
+            res = self.svm_infer_time(seq_pick, dir_libsvm=dir_root_svm)
             seq_pick_fft = fft_wrapper(seq_pick)
             res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
             weight = 0.5
@@ -267,8 +267,13 @@ class SmokeDetector:
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             # while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             self._alarm_guarantee_logic(sensor_db)
-            self._low_sensitivity_logic(sensor_db)
-            self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
+            seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
+            seq_forward_mean = np.mean(seq_forward)
+            if seq_forward_mean < ALARM_LOW_TH:
+                self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
+            else:
+                self._low_sensitivity_logic(sensor_db)
+
 
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):

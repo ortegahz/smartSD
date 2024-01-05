@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fftpack import fft
 
-from utils import set_logging
+from utils.utils import set_logging
 
 
 def fft_wrapper(time_seq):

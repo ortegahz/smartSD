@@ -86,7 +86,7 @@ def find_anchor_idxes(seq, last_val_th=256):
     return anchor_idxes, anchor_idx_max
 
 
-def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
+def find_key_idx(seq, th_val=10, th_cnt=10, th_delta=10):
     cnt = 0
     key_idx = -1
     # filter one
@@ -107,7 +107,7 @@ def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):
         mean = np.mean(np.absolute(seq[key_idx - 1:idx_end - 1] - seq[key_idx:idx_end]))
         # if mean > th_mean or seq[idx_end-1] > 220:
         logging.info(f'seq[idx_end - 1] - seq[key_idx] -> {seq[idx_end - 1] - seq[key_idx]}')
-        if seq[idx_end - 1] - seq[key_idx] > 5:
+        if seq[idx_end - 1] - seq[key_idx] > th_delta:
             flag_valid = True
             logging.info(f'filter two found key_idx -> {key_idx}')
             break

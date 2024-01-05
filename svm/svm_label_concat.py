@@ -7,10 +7,10 @@ from utils.utils import set_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--paths_in',
-    #                     default=['/home/manu/tmp/smartsd_v0', '/home/manu/tmp/smartsd_v1', '/home/manu/tmp/smartsd_v2'])
     parser.add_argument('--paths_in',
-                        default=['/home/manu/tmp/smartsd_v3'])
+                        default=['/home/manu/tmp/smartsd_v0', '/home/manu/tmp/smartsd_v1', '/home/manu/tmp/smartsd_v2'])
+    # parser.add_argument('--paths_in',
+    #                     default=['/home/manu/tmp/smartsd_v3'])
     parser.add_argument('--path_out', default='/home/manu/tmp/smartsd')
     return parser.parse_args()
 

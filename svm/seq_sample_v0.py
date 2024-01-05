@@ -5,8 +5,8 @@ import os
 
 import numpy as np
 
-from fft import fft_wrapper
-from utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process, update_svm_label_file
+from demos.demo_fft import fft_wrapper
+from utils.utils import set_logging, db_gen, plot_db, make_dirs, find_key_idx, seq_pick_process, update_svm_label_file
 
 
 def run(args):

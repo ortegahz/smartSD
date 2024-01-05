@@ -14,3 +14,9 @@ rtsvm_freq\.scale
 rtsvm_freq\.predict
 
 rtsvm_freq
+
+demos/rtsvm_time\.scale
+
+demos/rtsvm_time\.predict
+
+demos/rtsvm_time

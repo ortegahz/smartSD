@@ -78,7 +78,12 @@ def find_anchor_idxes(seq, last_val_th=256):
             anchor_idx, anchor_val, cnt = i, val, 0
         else:
             cnt += 1
-    return anchor_idxes
+    anchor_val_max, anchor_idx_max = -1, -1
+    for anchor_idx in anchor_idxes:
+        anchor_val = seq[anchor_idx]
+        if anchor_val > anchor_val_max:
+            anchor_val_max, anchor_idx_max = anchor_val, anchor_idx
+    return anchor_idxes, anchor_idx_max
 
 
 def find_key_idx(seq, th_val=10, th_cnt=10, th_mean=1.):

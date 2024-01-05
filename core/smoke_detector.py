@@ -189,7 +189,7 @@ class SmokeDetector:
                 if sensor_db.cnt_alarm_svm > 0 else sensor_db.cnt_alarm_svm
             return
         seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
-        res = self.svm_infer(seq_pick, dir_libsvm=dir_root_svm)
+        res = self.svm_infer(seq_pick, suffix='_future', dir_libsvm=dir_root_svm)
         sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res

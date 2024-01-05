@@ -3,8 +3,8 @@ import glob
 import logging
 import os
 
-from smoke_detector import SmokeDetector
-from utils import set_logging, db_gen, make_dirs
+from core.smoke_detector import SmokeDetector
+from utils.utils import set_logging, db_gen, make_dirs
 
 
 def parse_args():

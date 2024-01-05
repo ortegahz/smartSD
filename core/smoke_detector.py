@@ -198,16 +198,16 @@ class SmokeDetector:
 
     def _high_sensitivity_logic(self, sensor_db, dir_root_svm, key=f'1_{1}'):
         # logging.info('sensor_db.cnt_alarm_svm = 0')
-        sensor_db.cnt_alarm_svm = 0.  # not take history wins results into count
+        # sensor_db.cnt_alarm_svm = 0.  # not take history wins results into count
         while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
-            seq_forward_max_val = np.max(seq_forward) if np.max(seq_forward) > 255 else 255
-            seq_forward *= 255. / seq_forward_max_val
-            # seq_forward[seq_forward > 255] = 255
+            # seq_forward_max_val = np.max(seq_forward) if np.max(seq_forward) > 255 else 255
+            # seq_forward *= 255. / seq_forward_max_val
+            seq_forward[seq_forward > 255] = 255.
             # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
             # seq_state = np.array(seq_state).astype(float)
             # logging.info('running high sensitivity logic ...')
-            key_idx = find_key_idx(seq_forward)
+            key_idx = find_key_idx(seq_forward, th_delta=5)
             if key_idx < 0:
                 logging.info('key_idx < 0')
                 # sensor_db.cur_state_idx = sensor_db.get_seq_len()

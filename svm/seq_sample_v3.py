@@ -9,6 +9,8 @@ from utils.utils import set_logging, make_dirs, db_gen_v3, plot_db_v3, \
     find_anchor_idxes, seq_pick_process_future, update_svm_label_file, \
     DEBUG_ALARM_INDICATOR_VAL, LEN_SEQ_LOW
 
+from demos.demo_fft import fft_wrapper
+
 
 def update_and_plot(db, anchor_idx, seq_forward, seq_backward, subset, idx_save, args):
     db['state'][anchor_idx + 1:anchor_idx + LEN_SEQ_LOW + 1] = DEBUG_ALARM_INDICATOR_VAL / 8
@@ -16,6 +18,8 @@ def update_and_plot(db, anchor_idx, seq_forward, seq_backward, subset, idx_save,
     seq_pick_forward, _, _ = seq_pick_process_future(seq_forward, anchor_idx)
     seq_pick_backward, _, _ = seq_pick_process_future(seq_backward, anchor_idx)
     seq_pick = np.concatenate((seq_pick_forward, seq_pick_backward), axis=0)
+    # seq_pick = seq_pick_forward
+    # seq_pick = fft_wrapper(seq_pick)
     update_svm_label_file(seq_pick, args.path_out, subset)
     plot_db_v3(db, 0.1, case=subset, dir_save=args.dir_plot_save, idx_save=idx_save)
 

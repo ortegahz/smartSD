@@ -166,8 +166,8 @@ class SmokeDetector:
         seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
         idx_backward_max = np.argmax(seq_backward)
         flag_valid = True
-        # if seq_backward[-1] < ALARM_LOW_TH / 2:
-        #     flag_valid = False
+        if seq_backward[-1] < ALARM_LOW_TH / 2:
+            flag_valid = False
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
         if idx_backward_max == LEN_SEQ_LOW - 1:
@@ -188,7 +188,9 @@ class SmokeDetector:
                 if sensor_db.cnt_alarm_svm > 0 else sensor_db.cnt_alarm_svm
             return
         seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
-        res = self.svm_infer(seq_pick, suffix='_future', dir_libsvm=dir_root_svm)
+        # seq_pick = seq_forward
+        # seq_pick = fft_wrapper(seq_pick)
+        res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
         sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res

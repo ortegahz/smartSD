@@ -24,7 +24,7 @@ ALARM_LOW_TH = 256
 ALARM_LOW_SVM_WIN_LEN = 16
 ALARM_LOW_CNT_TH_SVM = 5
 ALARM_LOW_CNT_DECAY = 0.1
-DEBUG_ALARM_INDICATOR_VAL = 2 ** 10
+DEBUG_ALARM_INDICATOR_VAL = 2 ** 16
 
 
 # SVM_LEN_SEQ_FUTURE = 16
@@ -70,12 +70,14 @@ def seq_pick_process_future(seq, anchor_idx):
     return seq_pick, idx_s, idx_e
 
 
-def find_anchor_idxes(seq, last_val_th=256):
+def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=65536):
     anchor_idxes = list()
     anchor_idx, anchor_val, cnt = -1, -1, 0
     for i, val in enumerate(seq):
-        if cnt >= LEN_SEQ_LOW and val > last_val_th:
+        if cnt >= LEN_SEQ_LOW and val > last_val_th and seq[anchor_idx] < anchor_val_th:
             anchor_idxes.append(anchor_idx)
+            anchor_idx, anchor_val, cnt = -1, -1, 0
+        elif cnt >= LEN_SEQ_LOW:
             anchor_idx, anchor_val, cnt = -1, -1, 0
         elif val >= anchor_val:
             anchor_idx, anchor_val, cnt = i, val, 0

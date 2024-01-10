@@ -70,7 +70,7 @@ def seq_pick_process_future(seq, anchor_idx):
     return seq_pick, idx_s, idx_e
 
 
-def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=65536):
+def find_anchor_idxes(seq, last_val_th=256, anchor_val_th=65536):
     anchor_idxes = list()
     anchor_idx, anchor_val, cnt = -1, -1, 0
     for i, val in enumerate(seq):

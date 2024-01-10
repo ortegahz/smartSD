@@ -166,8 +166,8 @@ class SmokeDetector:
         seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
         idx_backward_max = np.argmax(seq_backward)
         flag_valid = True
-        if seq_backward[-1] < ALARM_LOW_TH / 2:
-            flag_valid = False
+        # if seq_backward[-1] < ALARM_LOW_TH / 2:
+        #     flag_valid = False
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
         if idx_backward_max == LEN_SEQ_LOW - 1:

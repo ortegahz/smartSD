@@ -17,8 +17,8 @@ def parse_args():
     # parser.add_argument('--save_dir', default=r'C:\Users\EOS1\Desktop\data')
     parser.add_argument('--dir_root_libsvm', default=r'C:\Users\zxthz\Desktop\demo\libsvm')
     parser.add_argument('--save_dir', default=r'C:\Users\zxthz\Desktop\data')
-    # parser.add_argument('--sample_idxes', default=[])
-    parser.add_argument('--sample_idxes', default=[0, 100])
+    parser.add_argument('--sample_idxes', default=[])
+    # parser.add_argument('--sample_idxes', default=[0, 100])
     return parser.parse_args()
 
 

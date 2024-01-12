@@ -12,7 +12,7 @@ from demos.demo_fft import fft_wrapper
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_LOW_SVM_WIN_LEN, \
     ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, \
     MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
-    find_key_idx, \
+    ALARM_LOW_NEG_SCORE_WEIGHT, find_key_idx, \
     seq_pick_process, update_svm_label_file
 
 
@@ -193,7 +193,7 @@ class SmokeDetector:
         res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
         sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
-        # res = res * 10 if res < 0 else res
+        res = res * ALARM_LOW_NEG_SCORE_WEIGHT if res < 0 else res
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res
         # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
         logging.info(('low sens case svm calc info', res, sensor_db.cnt_alarm_svm))

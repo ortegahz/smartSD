@@ -10,7 +10,7 @@ import serial
 
 from demos.demo_fft import fft_wrapper
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_LOW_SVM_WIN_LEN, \
-    ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, \
+    ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, ALARM_LOW_SMOOTH_TH, \
     MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
     ALARM_LOW_NEG_SCORE_WEIGHT, find_key_idx, \
     seq_pick_process, update_svm_label_file
@@ -33,6 +33,8 @@ class SensorDB:
         self.cnt_alarm_guarantee = 0
         self.alarm_logic_low_anchor_idx = 0
         self.alarm_logic_low_probation_scores = list()
+        self.alarm_record = list()
+        self.alarm_record_last_pos = -1
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
                cur_low_sens_score,
@@ -191,14 +193,35 @@ class SmokeDetector:
         # seq_pick = seq_forward
         # seq_pick = fft_wrapper(seq_pick)
         res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
+        # rectification
+        seq_diff = np.diff(seq_forward)
+        seq_diff_valid = seq_diff[seq_diff > 0.]
+        seq_diff_valid_mean = np.mean(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
+        # seq_diff_valid_mean = seq_diff_valid_mean / sensor_db.seq_forward[sensor_db.alarm_logic_low_anchor_idx]
+        # res = res if seq_diff_valid_mean < ALARM_LOW_SMOOTH_TH else -1.
+        if seq_diff_valid_mean > ALARM_LOW_SMOOTH_TH and res > 0:
+            sensor_db.seq_state[-LEN_SEQ_LOW] = -1 * DEBUG_ALARM_INDICATOR_VAL / 4
+            res = 0
         sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
         res = res * ALARM_LOW_NEG_SCORE_WEIGHT if res < 0 else res
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res
         # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
         logging.info(('low sens case svm calc info', res, sensor_db.cnt_alarm_svm))
+        # if alarm_pos > sensor_db.alarm_record_last_pos + 1:
+        #     sensor_db.alarm_record.append([alarm_pos, alarm_diff_abs_mean, seq_diff_valid_mean])
+        alarm_pos = sensor_db.get_seq_len() - LEN_SEQ_LOW
+        alarm_diff_abs_mean = np.mean(np.absolute(seq_forward - seq_backward))
+        if res > 0:
+            sensor_db.alarm_record = [[alarm_pos, alarm_diff_abs_mean, seq_diff_valid_mean]]
+        sensor_db.alarm_record_last_pos = alarm_pos
         if sensor_db.cnt_alarm_svm > ALARM_LOW_CNT_TH_SVM:
-            sensor_db.seq_state_freq[-LEN_SEQ_LOW] = DEBUG_ALARM_INDICATOR_VAL
+            sensor_db.seq_state_freq[-LEN_SEQ_LOW] = DEBUG_ALARM_INDICATOR_VAL / 2
+            # alarm_pos = sensor_db.get_seq_len() - LEN_SEQ_LOW
+            # alarm_diff_abs_mean = np.mean(np.absolute(seq_forward - seq_backward))
+            # if alarm_pos > sensor_db.alarm_record_last_pos + 1:
+            #     sensor_db.alarm_record.append([alarm_pos, alarm_diff_abs_mean])
+            # sensor_db.alarm_record_last_pos = alarm_pos
         # sensor_db.cur_state_idx = sensor_db.alarm_logic_low_anchor_idx - 2 * LEN_SEQ  # seq for svm models
         # sensor_db.cur_state_idx = sensor_db.cur_state_idx if sensor_db.cur_state_idx > 0 else 0
         # idx_valid_s = int(-LEN_SEQ_LOW / 2)
@@ -494,6 +517,10 @@ class SmokeDetector:
             plt.legend()
             plt.grid()
             plt.title(key + '_' + title_info)
+            for _record in self.db[key].alarm_record:
+                pos_x, _diff_fb, _diff_f = _record
+                plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),
+                         f'{_diff_fb:.0f}\n{_diff_f:.2f}')
         plt.show()
         plt.pause(pause_time_s)
         if save_plot:

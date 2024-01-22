@@ -11,7 +11,7 @@ import serial
 from demos.demo_fft import fft_wrapper
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_LOW_SVM_WIN_LEN, \
     ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, ALARM_LOW_SMOOTH_TH, \
-    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, \
+    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, \
     ALARM_LOW_NEG_SCORE_WEIGHT, find_key_idx, \
     seq_pick_process, update_svm_label_file
 
@@ -35,6 +35,7 @@ class SensorDB:
         self.alarm_logic_low_probation_scores = list()
         self.alarm_record = list()
         self.alarm_record_last_pos = -1
+        self.anchor_val = 0
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
                cur_low_sens_score,
@@ -172,7 +173,8 @@ class SmokeDetector:
         #     flag_valid = False
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
-        if idx_backward_max == LEN_SEQ_LOW - 1:
+        if idx_backward_max == LEN_SEQ_LOW - 1 and seq_backward[-1] > sensor_db.anchor_val * ALARM_LOW_ANCHOR_STEP:
+            sensor_db.anchor_val = seq_backward[-1]
             sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 10 \
                 if sensor_db.get_seq_len() - 1 - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW \
                 else DEBUG_ALARM_INDICATOR_VAL / 5
@@ -199,9 +201,9 @@ class SmokeDetector:
         seq_diff_valid_mean = np.mean(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
         # seq_diff_valid_mean = seq_diff_valid_mean / sensor_db.seq_forward[sensor_db.alarm_logic_low_anchor_idx]
         # res = res if seq_diff_valid_mean < ALARM_LOW_SMOOTH_TH else -1.
-        if seq_diff_valid_mean > ALARM_LOW_SMOOTH_TH and res > 0:
-            sensor_db.seq_state[-LEN_SEQ_LOW] = -1 * DEBUG_ALARM_INDICATOR_VAL / 4
-            res = 0
+        # if seq_diff_valid_mean > ALARM_LOW_SMOOTH_TH and res > 0:
+        #     sensor_db.seq_state[-LEN_SEQ_LOW] = -1 * DEBUG_ALARM_INDICATOR_VAL / 4
+        #     res = 0
         sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
         res = res * ALARM_LOW_NEG_SCORE_WEIGHT if res < 0 else res

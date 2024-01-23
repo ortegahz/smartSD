@@ -523,7 +523,7 @@ class SmokeDetector:
                 pos_x, _diff_fb, _diff_f = _record
                 plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),
                          f'{_diff_fb:.0f}\n{_diff_f:.2f}')
-        button_rst = plt.waitforbuttonpress(1)
+        button_rst = plt.waitforbuttonpress(0.001)
         # logging.info(('button_rst -> ', button_rst))
         plt.show()
         plt.pause(pause_time_s)

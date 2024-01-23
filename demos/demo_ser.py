@@ -31,10 +31,8 @@ def main():
     while True:
         smoke_detector.update_db_ser_multi_amp()
         smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
-        smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.5)
-        if len(args.sample_idxes) > 0 and \
-                args.addrs_sensor[0] in smoke_detector.db.keys() and \
-                smoke_detector.db[args.addrs_sensor[0]].get_seq_len() >= args.sample_idxes[-1]:
+        cmd_sample = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.5)
+        if args.addrs_sensor[0] in smoke_detector.db.keys() and cmd_sample:
             smoke_detector.save_db(args.addrs_sensor, args.sample_idxes, save_dir=args.save_dir)
             break
 

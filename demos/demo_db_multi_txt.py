@@ -2,6 +2,7 @@ import argparse
 import glob
 import logging
 import os
+import sys
 
 from core.smoke_detector import SmokeDetector
 from utils.utils import set_logging, db_gen_v3, make_dirs
@@ -9,7 +10,7 @@ from utils.utils import set_logging, db_gen_v3, make_dirs
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202312/线香')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202312/尖嘴加湿器')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')
@@ -32,8 +33,10 @@ def main():
             flag_save_plot = True if i == db['seq_len'] - 1 else False
             title_info = os.path.basename(path_in).split('.')[0]
             path_plot_save = os.path.join(args.dir_plot_save, title_info)
-            smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                   path_save=path_plot_save, title_info=title_info)
+            cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
+                                              path_save=path_plot_save, title_info=title_info)
+            if cmd_exit:
+                sys.exit(0)
         smoke_detector.clear_db()
 
 

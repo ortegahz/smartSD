@@ -331,9 +331,9 @@ class SmokeDetector:
         for key in keys:
             sensor_db = self.db[key]
             # logging.info((key, sensor_db.cur_state_idx, sensor_db.get_seq_len()))
-            if sensor_db.get_seq_len() <= LEN_SEQ:
-                # logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
-                continue
+            # if sensor_db.get_seq_len() <= LEN_SEQ:
+            #     # logging.info('sensor_db.get_seq_len() <= LEN_SEQ')
+            #     continue
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             # while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             self._alarm_guarantee_logic(sensor_db)
@@ -497,7 +497,7 @@ class SmokeDetector:
     def plot_db(self, keys, pause_time_s=1, save_plot=False, path_save='/home/manu/tmp/plt.png', title_info=''):
         for key in keys:
             if key not in self.db.keys():
-                return
+                return None
         plt.ion()
         for i, key in enumerate(keys):
             time_idxs = range(self.db[key].get_seq_len())
@@ -523,11 +523,14 @@ class SmokeDetector:
                 pos_x, _diff_fb, _diff_f = _record
                 plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),
                          f'{_diff_fb:.0f}\n{_diff_f:.2f}')
+        button_rst = plt.waitforbuttonpress(1)
+        # logging.info(('button_rst -> ', button_rst))
         plt.show()
         plt.pause(pause_time_s)
         if save_plot:
             plt.savefig(path_save)
         plt.clf()
+        return button_rst
 
     def save_db(self, keys, save_idxes=(0, 100), save_dir='/home/manu/tmp'):
         for key in keys:

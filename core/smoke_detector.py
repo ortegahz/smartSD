@@ -539,11 +539,9 @@ class SmokeDetector:
         for key in keys:
             save_path = os.path.join(save_dir, key + '.txt')
             seq_len = self.db[key].get_seq_len()
-            seq_len_save = save_idxes[-1] - save_idxes[0]
-            assert seq_len_save <= seq_len
             with open(save_path, 'w') as f:
                 f.write('forward backward \n')
-                for i in range(seq_len_save):
-                    val_forward = np.array(self.db[key].seq_forward[i + save_idxes[0]]).astype('float')
-                    val_backward = np.array(self.db[key].seq_backward[i + save_idxes[0]]).astype('float')
+                for i in range(seq_len):
+                    val_forward = np.array(self.db[key].seq_forward[i]).astype('float')
+                    val_backward = np.array(self.db[key].seq_backward[i]).astype('float')
                     f.write(f'{val_forward} {val_backward} \n')

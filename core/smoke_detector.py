@@ -173,16 +173,16 @@ class SmokeDetector:
         #     flag_valid = False
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
-        if idx_backward_max == LEN_SEQ_LOW - 1 and seq_backward[-1] > sensor_db.anchor_val * ALARM_LOW_ANCHOR_STEP:
+        if idx_backward_max == len(seq_backward) - 1 and seq_backward[-1] > sensor_db.anchor_val * ALARM_LOW_ANCHOR_STEP:
             sensor_db.anchor_val = seq_backward[-1]
             sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 10 \
                 if sensor_db.get_seq_len() - 1 - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW \
                 else DEBUG_ALARM_INDICATOR_VAL / 5
             sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1
             sensor_db.alarm_logic_low_probation_scores = list()  # reset
-        sensor_db.alarm_logic_low_anchor_idx = 0 \
-            if sensor_db.alarm_logic_low_anchor_idx < sensor_db.get_seq_len() - LEN_SEQ_LOW - ALARM_LOW_SVM_WIN_LEN \
-            else sensor_db.alarm_logic_low_anchor_idx
+        # sensor_db.alarm_logic_low_anchor_idx = 0 \
+        #     if sensor_db.alarm_logic_low_anchor_idx < sensor_db.get_seq_len() - LEN_SEQ_LOW - ALARM_LOW_SVM_WIN_LEN \
+        #     else sensor_db.alarm_logic_low_anchor_idx
         sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 5
         if sensor_db.alarm_logic_low_anchor_idx == 0 or \
                 sensor_db.get_seq_len() - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW:

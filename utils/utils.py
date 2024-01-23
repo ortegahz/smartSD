@@ -8,7 +8,7 @@ import xlrd
 
 GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
-LEN_SEQ_LOW = 12
+LEN_SEQ_LOW = 16
 
 LEN_SEQ = 32
 LEN_OVERLAP = 16
@@ -73,16 +73,16 @@ def seq_pick_process_future(seq, anchor_idx):
     return seq_pick, idx_s, idx_e
 
 
-def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=65536):
+def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=256):
     anchor_idxes = list()
     anchor_idx, anchor_val, cnt = -1, -1, 0
     for i, val in enumerate(seq):
-        if cnt >= LEN_SEQ_LOW and val > last_val_th and seq[anchor_idx] < anchor_val_th:
+        if cnt >= LEN_SEQ_LOW and val > last_val_th and seq[anchor_idx] > anchor_val_th:
             anchor_idxes.append(anchor_idx)
             anchor_idx, anchor_val, cnt = -1, -1, 0
         elif cnt >= LEN_SEQ_LOW:
             anchor_idx, anchor_val, cnt = -1, -1, 0
-        elif val >= anchor_val:
+        elif val >= anchor_val * ALARM_LOW_ANCHOR_STEP:
             anchor_idx, anchor_val, cnt = i, val, 0
         else:
             cnt += 1

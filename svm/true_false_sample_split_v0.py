@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from utils import set_logging, make_dirs
+from utils.utils import set_logging, make_dirs
 
 
 def run(args):
@@ -26,7 +26,7 @@ def run(args):
         for path_src in paths_src:
             file_name = os.path.basename(path_src)
             if 'spray' in case_name:
-                continue  # spray case is useless (can not see rising stage)
+                continue  # spray case is covered by low sensitive models
             if 'tf' in case_name or 'incense' in case_name or 'spray' in case_name:
                 path_dst = os.path.join(dir_root_pos, file_name)
             else:

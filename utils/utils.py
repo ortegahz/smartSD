@@ -10,7 +10,7 @@ GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
 LEN_SEQ_LOW = 16
 
-LEN_SEQ = 32
+LEN_SEQ = 16
 LEN_OVERLAP = 16
 MAX_SEQ = 4096 * 64
 SENSOR_ID = 5
@@ -18,15 +18,17 @@ MIN_SER_CHAR_NUM = 40
 ALARM_CNT_TH = 16
 ALARM_CNT_TH_SVM = 10
 ALARM_CNT_GUARANTEE_TH = 16
+ALARM_NEG_SCORE_WEIGHT = 3
 ALARM_GUARANTEE_SHORT_TH = 35000
 ALARM_LOW_DIFF_TH = 800
 ALARM_LOW_TH = 256
+ALARM_LOW_BASE_TH = 32
 ALARM_LOW_SVM_WIN_LEN = 64
 ALARM_LOW_CNT_TH_SVM = 5
 ALARM_LOW_CNT_DECAY = 0.1
 ALARM_LOW_NEG_SCORE_WEIGHT = 2
 ALARM_LOW_SMOOTH_TH = 1000
-DEBUG_ALARM_INDICATOR_VAL = 2 ** 16
+DEBUG_ALARM_INDICATOR_VAL = 2 ** 8
 ALARM_LOW_ANCHOR_STEP = 2
 
 
@@ -71,6 +73,23 @@ def seq_pick_process_future(seq, anchor_idx):
         seq_pick = np.append(seq_pick, pad)
     assert len(seq_pick) == LEN_SEQ_LOW
     return seq_pick, idx_s, idx_e
+
+
+def find_anchor_idx_up(seq, th_sum=32, th_left=32, th_right=250):
+    anchor_idx = -1
+    if len(seq) < LEN_SEQ:
+        return anchor_idx
+    for i in range(LEN_SEQ - 1, len(seq)):
+        seq_pick = seq[i - LEN_SEQ + 1:i + 1]
+        seq_diff = np.diff(seq_pick)
+        seq_diff_valid = seq_diff[seq_diff > 0.]
+        seq_diff_valid_sum = np.sum(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
+        seq_pick_idx_max = np.argmax(seq_pick)
+        if seq_diff_valid_sum > th_sum and th_left < seq_pick[0] < seq_pick[-1] < th_right and \
+                seq_pick_idx_max == LEN_SEQ - 1:
+            anchor_idx = i
+            break
+    return anchor_idx
 
 
 def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=256):

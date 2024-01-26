@@ -2,6 +2,7 @@ import argparse
 import glob
 import logging
 import os
+import sys
 
 from core.smoke_detector import SmokeDetector
 from utils.utils import set_logging, db_gen, make_dirs
@@ -35,8 +36,10 @@ def main():
             flag_save_plot = True if i == db['seq_len_max'] - 1 else False
             title_info = os.path.basename(path_in).split('.')[0]
             path_plot_save = os.path.join(args.dir_plot_save, title_info)
-            smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                   path_save=path_plot_save, title_info=title_info)
+            cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
+                                              path_save=path_plot_save, title_info=title_info)
+            if cmd_exit:
+                sys.exit(0)
         smoke_detector.clear_db()
 
 

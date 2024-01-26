@@ -9,11 +9,10 @@ import numpy as np
 import serial
 
 from demos.demo_fft import fft_wrapper
-from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_LOW_SVM_WIN_LEN, \
-    ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, ALARM_LOW_SMOOTH_TH, \
-    MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, \
-    ALARM_LOW_NEG_SCORE_WEIGHT, find_key_idx, \
-    seq_pick_process, update_svm_label_file
+from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, \
+    LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, \
+    DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, \
+    ALARM_LOW_NEG_SCORE_WEIGHT, update_svm_label_file
 
 
 class SensorDB:
@@ -173,7 +172,8 @@ class SmokeDetector:
         #     flag_valid = False
         # sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1 \
         #     if idx_backward_max == LEN_SEQ_LOW - 1 else sensor_db.alarm_logic_low_anchor_idx
-        if idx_backward_max == len(seq_backward) - 1 and seq_backward[-1] > sensor_db.anchor_val * ALARM_LOW_ANCHOR_STEP:
+        if idx_backward_max == len(seq_backward) - 1 and seq_backward[
+            -1] > sensor_db.anchor_val * ALARM_LOW_ANCHOR_STEP:
             sensor_db.anchor_val = seq_backward[-1]
             sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 10 \
                 if sensor_db.get_seq_len() - 1 - sensor_db.alarm_logic_low_anchor_idx < LEN_SEQ_LOW \
@@ -267,52 +267,19 @@ class SmokeDetector:
         #     sensor_db.seq_state[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     def _high_sensitivity_logic(self, sensor_db, dir_root_svm, key=f'1_{1}'):
-        # logging.info('sensor_db.cnt_alarm_svm = 0')
-        # sensor_db.cnt_alarm_svm = 0.  # not take history wins results into count
-        while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
-            seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
-            # seq_forward_max_val = np.max(seq_forward) if np.max(seq_forward) > 255 else 255
-            # seq_forward *= 255. / seq_forward_max_val
-            seq_forward[seq_forward > ALARM_LOW_TH] = ALARM_LOW_TH
-            # seq_state = sensor_db.seq_state[sensor_db.cur_state_idx:]
-            # seq_state = np.array(seq_state).astype(float)
-            # logging.info('running high sensitivity logic ...')
-            key_idx = find_key_idx(seq_forward, th_delta=5)
-            if key_idx < 0:
-                logging.info('key_idx < 0')
-                # sensor_db.cur_state_idx = sensor_db.get_seq_len()
-                # break
-                sensor_db.cur_state_idx += 1
-                # sensor_db.cnt_alarm = 0  # counter reset
-                sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm - 0.1 if sensor_db.cnt_alarm_svm > 0 else 0
-                continue
-            seq_pick, idx_s, idx_e = seq_pick_process(seq_forward, key_idx)
-            res = self.svm_infer_time(seq_pick, dir_libsvm=dir_root_svm)
-            seq_pick_fft = fft_wrapper(seq_pick)
-            res_freq = self.svm_infer_freq(seq_pick_fft, dir_libsvm=dir_root_svm)
-            weight = 0.5
-            score = res * weight + res_freq * (1 - weight)
-            # score = 1
-            sensor_db.seq_state_time[key_idx + sensor_db.cur_state_idx] = res * DEBUG_ALARM_INDICATOR_VAL / 4
-            sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = \
-                sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] \
-                    if sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] == DEBUG_ALARM_INDICATOR_VAL \
-                    else res_freq * DEBUG_ALARM_INDICATOR_VAL / 2
-            sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = score * DEBUG_ALARM_INDICATOR_VAL / 4 * 3
-            # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
-            sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score if score > 0 else 0
-            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = sensor_db.cnt_alarm_svm * 10
-            logging.info(('svm calc info', key, res, res_freq, score, sensor_db.cnt_alarm_svm))
-            if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
-                sensor_db.seq_state_freq[key_idx + sensor_db.cur_state_idx] = DEBUG_ALARM_INDICATOR_VAL
-                # sensor_db.cnt_alarm_svm = 0
-            #     _seq_state = np.array(sensor_db.seq_state)
-            #     _seq_state[idx_s + sensor_db.cur_state_idx: idx_e + sensor_db.cur_state_idx] = 200
-            #     sensor_db.seq_state = list(_seq_state)
-            # sensor_db.seq_state[idx_s + sensor_db.cur_state_idx] = 50  # start position
-            # sensor_db.seq_state[key_idx + sensor_db.cur_state_idx] = 100  # key position
-            # sensor_db.cur_state_idx = idx_e + sensor_db.cur_state_idx
-            sensor_db.cur_state_idx += 1
+        if sensor_db.get_seq_len() < LEN_SEQ or sensor_db.seq_forward[-1] < ALARM_LOW_BASE_TH:
+            return
+        seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ:]).astype(float)
+        seq_forward[seq_forward > ALARM_LOW_TH] = ALARM_LOW_TH
+        seq_backword = np.array(sensor_db.seq_backward[-LEN_SEQ:]).astype(float)
+        seq_backword[seq_backword > ALARM_LOW_TH] = ALARM_LOW_TH
+        seq_pick = np.concatenate((seq_forward, seq_backword), axis=0)
+        score = self.svm_infer(seq_pick, suffix='_high', dir_libsvm=dir_root_svm)
+        sensor_db.seq_state_time[-1] = score * DEBUG_ALARM_INDICATOR_VAL / 4
+        score = score * ALARM_NEG_SCORE_WEIGHT if score < 0 else score
+        sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score
+        if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
+            sensor_db.seq_state_freq[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     @staticmethod
     def _alarm_guarantee_logic(sensor_db):

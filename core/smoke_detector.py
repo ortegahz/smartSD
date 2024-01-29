@@ -194,7 +194,7 @@ class SmokeDetector:
         seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
         # seq_pick = seq_forward
         # seq_pick = fft_wrapper(seq_pick)
-        res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
+        res = self.svm_infer(seq_pick, suffix='_low', dir_libsvm=dir_root_svm)
         # rectification
         seq_diff = np.diff(seq_forward)
         seq_diff_valid = seq_diff[seq_diff > 0.]
@@ -204,7 +204,7 @@ class SmokeDetector:
         # if seq_diff_valid_mean > ALARM_LOW_SMOOTH_TH and res > 0:
         #     sensor_db.seq_state[-LEN_SEQ_LOW] = -1 * DEBUG_ALARM_INDICATOR_VAL / 4
         #     res = 0
-        sensor_db.seq_state_time[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
+        sensor_db.seq_state_freq[-LEN_SEQ_LOW] = res * DEBUG_ALARM_INDICATOR_VAL / 4
         # sensor_db.seq_state[sensor_db.cur_state_idx] = res * 128 if res > 0 else 0
         res = res * ALARM_LOW_NEG_SCORE_WEIGHT if res < 0 else res
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res
@@ -218,7 +218,7 @@ class SmokeDetector:
             sensor_db.alarm_record = [[alarm_pos, alarm_diff_abs_mean, seq_diff_valid_mean]]
         sensor_db.alarm_record_last_pos = alarm_pos
         if sensor_db.cnt_alarm_svm > ALARM_LOW_CNT_TH_SVM:
-            sensor_db.seq_state_freq[-LEN_SEQ_LOW] = DEBUG_ALARM_INDICATOR_VAL / 2
+            sensor_db.seq_state_freq[-LEN_SEQ_LOW] = DEBUG_ALARM_INDICATOR_VAL
             # alarm_pos = sensor_db.get_seq_len() - LEN_SEQ_LOW
             # alarm_diff_abs_mean = np.mean(np.absolute(seq_forward - seq_backward))
             # if alarm_pos > sensor_db.alarm_record_last_pos + 1:
@@ -279,7 +279,7 @@ class SmokeDetector:
         score = score * ALARM_NEG_SCORE_WEIGHT if score < 0 else score
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score
         if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
-            sensor_db.seq_state_freq[-1] = DEBUG_ALARM_INDICATOR_VAL
+            sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     @staticmethod
     def _alarm_guarantee_logic(sensor_db):
@@ -304,9 +304,9 @@ class SmokeDetector:
             # while not sensor_db.cur_state_idx == sensor_db.get_seq_len():
             # while sensor_db.cur_state_idx + LEN_SEQ <= sensor_db.get_seq_len():
             self._alarm_guarantee_logic(sensor_db)
-            seq_forward = np.array(sensor_db.seq_forward[sensor_db.cur_state_idx:]).astype(float)
+            seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ:]).astype(float)
             seq_forward_max = np.max(seq_forward)
-            if seq_forward_max < ALARM_LOW_TH:
+            if seq_forward_max < ALARM_LOW_TH - 1:  # TODO: ALARM_LOW_TH
                 self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
             else:
                 self._low_sensitivity_logic(sensor_db, dir_root_svm)
@@ -485,7 +485,7 @@ class SmokeDetector:
             plt.yticks(np.arange(0, DEBUG_ALARM_INDICATOR_VAL, DEBUG_ALARM_INDICATOR_VAL / 10))
             plt.legend()
             plt.grid()
-            plt.title(key + '_' + title_info)
+            plt.title(title_info)
             for _record in self.db[key].alarm_record:
                 pos_x, _diff_fb, _diff_f = _record
                 plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),

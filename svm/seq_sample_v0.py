@@ -7,7 +7,7 @@ import numpy as np
 
 from demos.demo_fft import fft_wrapper
 from utils.utils import set_logging, db_gen, plot_db, make_dirs, \
-    find_anchor_idx_up, update_svm_label_file, \
+    find_anchor_idxes_up, update_svm_label_file, \
     LEN_SEQ, DEBUG_ALARM_INDICATOR_VAL
 
 
@@ -28,18 +28,27 @@ def run(args):
                 continue
             seq_forward = np.array(db['adc_forward']).astype(float)
             seq_backward = np.array(db['adc_backward']).astype(float)
-            anchor_idx = find_anchor_idx_up(seq_backward)
-            if anchor_idx < 0:
+            # anchor_idx = find_anchor_idx_up(seq_backward)
+            # if anchor_idx < 0:
+            #     continue
+            NUM_OF_NEG = 4
+            anchor_idxes = find_anchor_idxes_up(seq_backward)
+            if len(anchor_idxes) < 1:
                 continue
-            db['status'][anchor_idx - LEN_SEQ + 1] = DEBUG_ALARM_INDICATOR_VAL
-            db['status'][anchor_idx] = DEBUG_ALARM_INDICATOR_VAL
-            seq_forward_pick = seq_forward[anchor_idx - LEN_SEQ + 1:anchor_idx + 1]
-            seq_backward_pick = seq_backward[anchor_idx - LEN_SEQ + 1:anchor_idx + 1]
-            seq_pick = np.concatenate((seq_forward_pick, seq_backward_pick), axis=0)
-            update_svm_label_file(seq_pick, args.path_out, subset)
-            if args.save_plot:
-                plot_db(db, None, 0.1, subset, args.dir_plot_save, idx_save)
-            idx_save += 1
+            if 'pos' in subset or len(anchor_idxes) < NUM_OF_NEG:
+                anchor_idxes_pick = anchor_idxes[:1]
+            else:
+                anchor_idxes_pick = anchor_idxes[:NUM_OF_NEG]
+            for anchor_idx in anchor_idxes_pick:
+                db['status'][anchor_idx - LEN_SEQ + 1] = DEBUG_ALARM_INDICATOR_VAL
+                db['status'][anchor_idx] = DEBUG_ALARM_INDICATOR_VAL
+                seq_forward_pick = seq_forward[anchor_idx - LEN_SEQ + 1:anchor_idx + 1]
+                seq_backward_pick = seq_backward[anchor_idx - LEN_SEQ + 1:anchor_idx + 1]
+                seq_pick = np.concatenate((seq_forward_pick, seq_backward_pick), axis=0)
+                update_svm_label_file(seq_pick, args.path_out, subset)
+                if args.save_plot:
+                    plot_db(db, None, 0.1, subset, args.dir_plot_save, idx_save)
+                idx_save += 1
 
 
 def parse_args():

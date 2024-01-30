@@ -10,7 +10,7 @@ from utils.utils import set_logging, db_gen, make_dirs
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/neg')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/pos')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--key_choose_forward', default='ADC_Forward')
     parser.add_argument('--key_choose_backward', default='ADC_Backward')

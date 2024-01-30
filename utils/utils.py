@@ -92,6 +92,27 @@ def find_anchor_idx_up(seq, th_sum=32, th_left=32, th_right=250):
     return anchor_idx
 
 
+def find_anchor_idxes_up(seq, th_sum=32, th_left=32, th_right=250):
+    anchor_idxes = list()
+    if len(seq) < LEN_SEQ:
+        return anchor_idxes
+    # for i in range(LEN_SEQ - 1, len(seq)):
+    i = LEN_SEQ - 1
+    while i < len(seq):
+        seq_pick = seq[i - LEN_SEQ + 1:i + 1]
+        seq_diff = np.diff(seq_pick)
+        seq_diff_valid = seq_diff[seq_diff > 0.]
+        seq_diff_valid_sum = np.sum(seq_diff_valid) if len(seq_diff_valid) > 0 else 0
+        seq_pick_idx_max = np.argmax(seq_pick)
+        if seq_diff_valid_sum > th_sum and th_left < seq_pick[0] < seq_pick[-1] < th_right and \
+                seq_pick_idx_max == LEN_SEQ - 1:
+            anchor_idxes.append(i)
+            i += LEN_SEQ
+        else:
+            i += 1
+    return anchor_idxes
+
+
 def find_anchor_idxes(seq, last_val_th=0, anchor_val_th=256):
     anchor_idxes = list()
     anchor_idx, anchor_val, cnt = -1, -1, 0

@@ -330,6 +330,7 @@ class SmokeDetector:
     def update_db_v1(self, db, idx, key_forward, key_backward, db_key='1_1'):
         feat_forward = np.array(db[key_forward.lower()]).astype('float')[idx]
         feat_backward = np.array(db[key_backward.lower()]).astype('float')[idx]
+
         if db_key not in self.db.keys():
             self.db[db_key] = SensorDB()
         self.db[db_key].update([feat_forward], [feat_backward], [0], [0], [0], [0], [0], [0])

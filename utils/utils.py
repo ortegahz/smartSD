@@ -261,6 +261,7 @@ def db_gen_v1(path_in):
         db['fname'] = file_name
         raw_data_addr_array = np.array(obj_sheet_pick.col_values(idx_addr)[1:])
         data_mask = raw_data_addr_array == addr
+        seq_len_max = 0
         for i, key in enumerate(keys):
             db_key = key
             if key == '部件地址':
@@ -283,6 +284,8 @@ def db_gen_v1(path_in):
                 db[db_key.lower()] = np.concatenate((np.array([addr] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
             else:
                 db[db_key.lower()] = np.concatenate((np.array([0] * LEN_SEQ), raw_data_array[data_mask]), axis=0)
+            seq_len_max = len(db[db_key.lower()]) if len(db[db_key.lower()]) > seq_len_max else seq_len_max
+        db['seq_len_max'] = seq_len_max
         dbs.append(db)
 
     return dbs

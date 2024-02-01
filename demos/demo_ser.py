@@ -31,7 +31,7 @@ def main():
     while True:
         smoke_detector.update_db_ser_multi_amp()
         smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
-        cmd_sample = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.5)
+        cmd_sample = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.5, show=True)
         if args.addrs_sensor[0] in smoke_detector.db.keys() and cmd_sample:
             smoke_detector.save_db(args.addrs_sensor, args.sample_idxes, save_dir=args.save_dir)
             break

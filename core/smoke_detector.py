@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import serial
 
-from demos.demo_fft import fft_wrapper
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, \
     LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, \
     DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, \
@@ -273,6 +272,9 @@ class SmokeDetector:
         seq_forward[seq_forward > ALARM_LOW_TH] = ALARM_LOW_TH
         seq_backword = np.array(sensor_db.seq_backward[-LEN_SEQ:]).astype(float)
         seq_backword[seq_backword > ALARM_LOW_TH] = ALARM_LOW_TH
+        seq_backword_idx_max = np.argmax(seq_backword)
+        if not seq_backword_idx_max == LEN_SEQ - 1:
+            return
         seq_pick = np.concatenate((seq_forward, seq_backword), axis=0)
         # score = self.svm_infer(seq_pick, suffix='_high', dir_libsvm=dir_root_svm)
         score = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
@@ -307,7 +309,7 @@ class SmokeDetector:
             self._alarm_guarantee_logic(sensor_db)
             seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ:]).astype(float)
             seq_forward_max = np.max(seq_forward)
-            if seq_forward_max < ALARM_LOW_TH - 1:  # TODO: ALARM_LOW_TH
+            if seq_forward_max < ALARM_LOW_TH:
                 self._high_sensitivity_logic(sensor_db, dir_root_svm, key)
             else:
                 self._low_sensitivity_logic(sensor_db, dir_root_svm)
@@ -463,7 +465,8 @@ class SmokeDetector:
     def clear_db(self):
         self.db.clear()
 
-    def plot_db(self, keys, pause_time_s=1, save_plot=False, path_save='/home/manu/tmp/plt.png', title_info=''):
+    def plot_db(self, keys, pause_time_s=1, save_plot=False,
+                path_save='/home/manu/tmp/plt.png', title_info='', show=False):
         for key in keys:
             if key not in self.db.keys():
                 return None
@@ -492,12 +495,18 @@ class SmokeDetector:
                 pos_x, _diff_fb, _diff_f = _record
                 plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),
                          f'{_diff_fb:.0f}\n{_diff_f:.2f}')
-        button_rst = plt.waitforbuttonpress(0.001)
-        # logging.info(('button_rst -> ', button_rst))
-        plt.show()
-        plt.pause(pause_time_s)
+        button_rst = None
         if save_plot:
+            gcf = plt.gcf()
+            gcf.set_size_inches(16, 8)
             plt.savefig(path_save)
+        if show:
+            mng = plt.get_current_fig_manager()
+            mng.resize(*mng.window.maxsize())
+            button_rst = plt.waitforbuttonpress(0.001)
+            logging.info(('button_rst -> ', button_rst))
+            plt.show()
+            plt.pause(pause_time_s)
         plt.clf()
         return button_rst
 

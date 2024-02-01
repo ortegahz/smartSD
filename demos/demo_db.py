@@ -8,7 +8,7 @@ from utils.utils import set_logging, db_gen
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_in',
-                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/pos/Incense_SOTA_20220823192548_101001_data_export_002.xlsx')
+                        default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/neg/Hot_SOTA_2022-08-09-3_1.xlsx')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--key_choose_forward', default='ADC_Forward')
     parser.add_argument('--key_choose_backward', default='ADC_Backward')
@@ -27,7 +27,7 @@ def main():
                                     args.key_choose_backward, db_key=args.addrs_sensor[0])
         smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
         flag_save_plot = True if i == db['seq_len_max'] - 1 else False
-        smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.1, save_plot=flag_save_plot)
+        smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.1, save_plot=flag_save_plot, show=False)
 
 
 if __name__ == '__main__':

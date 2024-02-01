@@ -4,18 +4,16 @@ import logging
 import os
 import sys
 
-import numpy as np
-
 from core.smoke_detector import SmokeDetector
-from utils.utils import set_logging, db_gen, make_dirs, ALARM_LOW_BASE_TH
+from utils.utils import set_logging, db_gen_v2, make_dirs
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/neg')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS_V2/pos')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
-    parser.add_argument('--key_choose_forward', default='ADC_Forward')
-    parser.add_argument('--key_choose_backward', default='ADC_Backward')
+    parser.add_argument('--key_choose_forward', default='forward')
+    parser.add_argument('--key_choose_backward', default='backward')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')
     return parser.parse_args()
@@ -30,11 +28,10 @@ def main():
     paths_in = glob.glob(os.path.join(args.dir_in, '*'))
     for j, path_in in enumerate(paths_in):
         logging.info((j, len(paths_in), path_in))
-        db = db_gen(path_in)
-        feat_backward = np.array(db[args.key_choose_backward.lower()]).astype('float')
-        if np.max(feat_backward) < ALARM_LOW_BASE_TH:
-            continue
+        db = db_gen_v2(path_in)
         for i in range(db['seq_len_max']):
+            if args.key_choose_forward not in db.keys() or args.key_choose_backward not in db.keys():
+                break
             smoke_detector.update_db_v1(db, i, args.key_choose_forward,
                                         args.key_choose_backward, db_key=args.addrs_sensor[0])
             smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)

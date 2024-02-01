@@ -22,7 +22,7 @@ ALARM_NEG_SCORE_WEIGHT = 3
 ALARM_GUARANTEE_SHORT_TH = 35000
 ALARM_LOW_DIFF_TH = 800
 ALARM_LOW_TH = 256
-ALARM_LOW_BASE_TH = 32
+ALARM_LOW_BASE_TH = 16
 ALARM_LOW_SVM_WIN_LEN = 64
 ALARM_LOW_CNT_TH_SVM = 5
 ALARM_LOW_CNT_DECAY = 0.1
@@ -215,6 +215,7 @@ def db_gen_v2(path_in):
         db['temperature'].append(int(line_lst[-3], base=16))
     addr_set = set(db['address'])
     assert len(addr_set) == 1
+    seq_len_max = 0
     for key in db.keys():
         if key == 'time' or key == 'fname':
             continue
@@ -223,6 +224,8 @@ def db_gen_v2(path_in):
                                      axis=0)
         else:
             db[key] = np.concatenate((np.array([0] * LEN_SEQ), np.array(db[key]).astype('float')), axis=0)
+        seq_len_max = len(db[key.lower()]) if len(db[key.lower()]) > seq_len_max else seq_len_max
+    db['seq_len_max'] = seq_len_max
     return db
 
 
@@ -345,14 +348,15 @@ def plot_db_v3(db, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.clf()
 
 
-def plot_db_v2(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):
+def plot_db_v2(db, seq_fft=None, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     time_idxs = range(len(db['address']))
-    freq_idxs = range(len(seq_fft))
+    if seq_fft is not None:
+        freq_idxs = range(len(seq_fft))
+        plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     plt.title(db['fname'] + f' <{case}>')
-    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     for key in db.keys():
-        if key == 'fname' or key == 'time':
+        if key == 'fname' or key == 'time' or key == 'seq_len_max':
             continue
         plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
         plt.legend()
@@ -383,14 +387,15 @@ def plot_dbs_v1(dbs, pause_time_s=1, case='', dir_save='', idx_save=0):
         plt.clf()
 
 
-def plot_db_v1(db, seq_fft, pause_time_s=1, case='', dir_save='', idx_save=0):
+def plot_db_v1(db, seq_fft=None, pause_time_s=1, case='', dir_save='', idx_save=0):
     plt.ion()
     time_idxs = range(len(db['addr'.lower()]))
-    freq_idxs = range(len(seq_fft))
+    if seq_fft is not None:
+        freq_idxs = range(len(seq_fft))
+        plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     plt.title(db['fname'] + f' <{case}>')
-    plt.plot(np.array(freq_idxs), np.array(seq_fft).astype(float), label='freq'.lower())
     for key in db.keys():
-        if key == 'fname' or key == 'timestamp' or key == 'co' or key == 'dark':
+        if key == 'fname' or key == 'timestamp' or key == 'co' or key == 'dark' or key == 'seq_len_max':
             continue
         plt.plot(np.array(time_idxs), np.array(db[key]).astype(float), label=key)
         plt.legend()

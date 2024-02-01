@@ -277,7 +277,7 @@ class SmokeDetector:
             return
         seq_pick = np.concatenate((seq_forward, seq_backword), axis=0)
         # score = self.svm_infer(seq_pick, suffix='_high', dir_libsvm=dir_root_svm)
-        score = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
+        score = self.svm_infer(seq_pick, suffix='_high_v0', dir_libsvm=dir_root_svm)
         sensor_db.seq_state_time[-1] = score * DEBUG_ALARM_INDICATOR_VAL / 4
         score = score * ALARM_NEG_SCORE_WEIGHT if score < 0 else score
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score

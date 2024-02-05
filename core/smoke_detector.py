@@ -353,6 +353,7 @@ class SmokeDetector:
         buff_lst_valid = [x for x in buff_lst if len(x) > MIN_SER_CHAR_NUM - 1]
         self.ser_buff = ''
         # logging.info(buff_lst_valid)
+        rst = -1
         for seq_valid in buff_lst_valid:
             seq_valid_lst = seq_valid.strip().split()
             if seq_valid_lst[4] == '08':  # frame data
@@ -383,7 +384,8 @@ class SmokeDetector:
                                        [amp_backward], [0],
                                        second_total)
                 self.db[db_key].balance()
-        return 0
+                rst = 0
+        return rst
 
     def update_db_ser(self):
         cnt = self.ser.inWaiting()

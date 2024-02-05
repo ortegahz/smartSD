@@ -344,11 +344,11 @@ class SmokeDetector:
                           0.588814, 0.294407, 0.1472036, 0.073602, 0.036801)
         cnt = self.ser.inWaiting()
         if cnt <= 0:
-            return
+            return -1
         recv = self.ser.read(self.ser.in_waiting).decode()
         self.ser_buff += recv
         if not self.ser_buff[-1] == '\n':
-            return
+            return -1
         buff_lst = self.ser_buff.split('\n')
         buff_lst_valid = [x for x in buff_lst if len(x) > MIN_SER_CHAR_NUM - 1]
         self.ser_buff = ''
@@ -383,6 +383,7 @@ class SmokeDetector:
                                        [amp_backward], [0],
                                        second_total)
                 self.db[db_key].balance()
+        return 0
 
     def update_db_ser(self):
         cnt = self.ser.inWaiting()
@@ -505,7 +506,7 @@ class SmokeDetector:
             mng = plt.get_current_fig_manager()
             mng.resize(*mng.window.maxsize())
             button_rst = plt.waitforbuttonpress(0.001)
-            logging.info(('button_rst -> ', button_rst))
+            # logging.info(('button_rst -> ', button_rst))
             plt.show()
             plt.pause(pause_time_s)
         plt.clf()

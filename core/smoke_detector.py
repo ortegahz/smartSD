@@ -281,6 +281,7 @@ class SmokeDetector:
         sensor_db.seq_state_time[-1] = score * DEBUG_ALARM_INDICATOR_VAL / 4
         score = score * ALARM_NEG_SCORE_WEIGHT if score < 0 else score
         sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + score
+        logging.info(('high sens case svm calc info', score, sensor_db.cnt_alarm_svm))
         if sensor_db.cnt_alarm_svm > ALARM_CNT_TH_SVM:
             sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 

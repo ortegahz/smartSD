@@ -10,7 +10,7 @@ from utils.utils import set_logging, db_gen_v3, make_dirs
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202312/香烟')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202312/水蒸气实验')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')

@@ -10,7 +10,8 @@ import serial
 
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, \
     LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, \
-    DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, \
+    DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, LEN_SEQ_NAIVE, \
+    ALARM_NAIVE_TH, \
     ALARM_LOW_NEG_SCORE_WEIGHT, update_svm_label_file
 
 
@@ -315,6 +316,16 @@ class SmokeDetector:
             else:
                 self._low_sensitivity_logic(sensor_db, dir_root_svm)
             # self._low_sensitivity_logic(sensor_db, dir_root_svm)
+
+    def infer_db_naive(self, keys):
+        for key in keys:
+            if key not in self.db.keys():
+                return
+        for key in keys:
+            sensor_db = self.db[key]
+            seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_NAIVE:]).astype(float)
+            if (seq_forward > ALARM_NAIVE_TH).all():
+                sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):

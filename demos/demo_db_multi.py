@@ -40,13 +40,14 @@ def main():
         for i in range(db['seq_len_max']):
             smoke_detector.update_db_v1(db, i, args.key_choose_forward,
                                         args.key_choose_backward, db_key=args.addrs_sensor[0])
-            smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
+            # smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
+            smoke_detector.infer_db_naive(args.addrs_sensor)
             flag_save_plot = True if i == db['seq_len_max'] - 1 else False
             title_info = os.path.basename(path_in).split('.')[0]
             title_info = f'{j}[{len(paths_in)}]_' + title_info
             path_plot_save = os.path.join(args.dir_plot_save, title_info)
             cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                              path_save=path_plot_save, title_info=title_info, show=True)
+                                              path_save=path_plot_save, title_info=title_info, show=False)
             if cmd_exit:
                 sys.exit(0)
         smoke_detector.clear_db()

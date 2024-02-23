@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument('--key_choose_backward', default='backward')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')
+    parser.add_argument('--sample_pick', default=None)
     return parser.parse_args()
 
 
@@ -27,6 +28,8 @@ def main():
     make_dirs(args.dir_plot_save)
     paths_in = glob.glob(os.path.join(args.dir_in, '*'))
     for j, path_in in enumerate(paths_in):
+        if args.sample_pick is not None and args.sample_pick not in path_in:
+            continue
         logging.info((j, len(paths_in), path_in))
         dbs = db_gen_v1(path_in)
         for k, db in enumerate(dbs):
@@ -35,13 +38,14 @@ def main():
                     break
                 smoke_detector.update_db_v1(db, i, args.key_choose_forward,
                                             args.key_choose_backward, db_key=args.addrs_sensor[0])
-                smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
+                # smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
+                smoke_detector.infer_db_naive(args.addrs_sensor)
                 flag_save_plot = True if i == db['seq_len_max'] - 1 else False
                 title_info = os.path.basename(path_in).split('.')[0]
                 title_info = f'{j}_{k}[{len(paths_in)}_{len(dbs)}]_' + title_info
                 path_plot_save = os.path.join(args.dir_plot_save, title_info)
                 cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                                  path_save=path_plot_save, title_info=title_info)
+                                                  path_save=path_plot_save, title_info=title_info, show=False)
                 if cmd_exit:
                     sys.exit(0)
             smoke_detector.clear_db()

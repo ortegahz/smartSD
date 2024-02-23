@@ -12,12 +12,13 @@ from utils.utils import set_logging, db_gen, make_dirs, ALARM_LOW_BASE_TH
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/neg')
+    parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/AI烟感资料整合-第一批/SONAR_TFS/pos')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--key_choose_forward', default='ADC_Forward')
     parser.add_argument('--key_choose_backward', default='ADC_Backward')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
     parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')
+    parser.add_argument('--sample_pick', default=None)
     return parser.parse_args()
 
 
@@ -29,6 +30,8 @@ def main():
     make_dirs(args.dir_plot_save)
     paths_in = glob.glob(os.path.join(args.dir_in, '*'))
     for j, path_in in enumerate(paths_in):
+        if args.sample_pick is not None and args.sample_pick not in path_in:
+            continue
         logging.info((j, len(paths_in), path_in))
         db = db_gen(path_in)
         feat_backward = np.array(db[args.key_choose_backward.lower()]).astype('float')
@@ -43,7 +46,7 @@ def main():
             title_info = f'{j}[{len(paths_in)}]_' + title_info
             path_plot_save = os.path.join(args.dir_plot_save, title_info)
             cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                              path_save=path_plot_save, title_info=title_info)
+                                              path_save=path_plot_save, title_info=title_info, show=True)
             if cmd_exit:
                 sys.exit(0)
         smoke_detector.clear_db()

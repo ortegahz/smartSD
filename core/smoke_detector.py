@@ -500,10 +500,6 @@ class SmokeDetector:
                 plt.text(pos_x, int(DEBUG_ALARM_INDICATOR_VAL / 2),
                          f'{_diff_fb:.0f}\n{_diff_f:.2f}')
         button_rst = None
-        if save_plot:
-            gcf = plt.gcf()
-            gcf.set_size_inches(16, 8)
-            plt.savefig(path_save)
         if show:
             mng = plt.get_current_fig_manager()
             mng.resize(*mng.window.maxsize())
@@ -511,6 +507,10 @@ class SmokeDetector:
             # logging.info(('button_rst -> ', button_rst))
             plt.show()
             plt.pause(pause_time_s)
+        if save_plot:
+            # gcf = plt.gcf()
+            # gcf.set_size_inches(16, 8)
+            plt.savefig(path_save)
         plt.clf()
         return button_rst
 

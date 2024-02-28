@@ -27,8 +27,8 @@ def run(args):
             assert path_src[-4:] == '.txt'
             file_name = os.path.basename(path_src)
             file_name_save = case_name + '_' + file_name
-            # if '烟枪' in case_name or '香烟吹' in case_name:  # skip hard case
-            #     continue
+            if '香烟吹' in case_name:  # invalid case
+                continue
             if 'EXP' in case_name:  # TODO
                 continue
             if '线香' in case_name or '香烟' in case_name or \

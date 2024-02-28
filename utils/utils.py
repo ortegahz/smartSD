@@ -31,7 +31,7 @@ ALARM_LOW_CNT_TH_SVM = 5
 ALARM_LOW_CNT_DECAY = 0.1
 ALARM_LOW_NEG_SCORE_WEIGHT = 2
 ALARM_LOW_SMOOTH_TH = 1000
-DEBUG_ALARM_INDICATOR_VAL = 2 ** 16
+DEBUG_ALARM_INDICATOR_VAL = 2 ** 11
 ALARM_LOW_ANCHOR_STEP = 2
 
 
@@ -177,6 +177,40 @@ def set_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+
+def db_gen_v4(path_in):
+    file_name = os.path.basename(path_in)
+    db = dict()
+    seq_len = 0
+    db['fname'] = file_name
+    keys = ('voc', 'co', 'temper', 'humid', 'pm010', 'pm025', 'pm100', 'forward', 'backward')
+    for key in keys:
+        db[key] = list()
+
+    with open(path_in, 'r') as f:
+        lines = f.readlines()
+    for line in lines:
+        if len(line) < 128:
+            continue
+        # logging.info(line)
+        line_lst = line.strip().split(',')
+        if not len(line_lst) == 14:
+            continue
+        line_lst_pick = line_lst[1:]
+        # logging.info(line_lst_pick)
+        voc, _, co, _, temper, humid, pm010, pm025, pm100, _, _, _, smoke = line_lst_pick
+        cur_data_lst = [voc, co, temper, humid, pm010, pm025, pm100, smoke]
+        # logging.info(cur_data_lst)
+        smoke_lst = smoke.split()
+        # logging.info(smoke_lst)
+        forward, backward = smoke_lst[2], smoke_lst[3]
+        cur_data_lst = [voc, co, temper, humid, pm010, pm025, pm100, forward, backward]
+        # logging.info(cur_data_lst)
+        for i, key in enumerate(keys):
+            db[key].append(cur_data_lst[i])  # must be same order
+        seq_len += 1
+    db['seq_len_max'] = seq_len
+    return db
 
 def db_gen_v3(path_in):
     keys = ['forward', 'backward']

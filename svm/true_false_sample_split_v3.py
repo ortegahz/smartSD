@@ -31,7 +31,7 @@ def run(args):
                 continue
             if 'EXP' in case_name:  # TODO
                 continue
-            if '线香' in case_name or '香烟' in case_name or \
+            if '线香' in case_name or '香烟' in case_name or 'POS' in case_name or \
                     '气溶胶' in case_name or '烟枪' in case_name:
                 path_dst = os.path.join(dir_root_pos, file_name_save)
             else:

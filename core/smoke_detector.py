@@ -11,7 +11,7 @@ import serial
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, \
     LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, \
     DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, LEN_SEQ_NAIVE, \
-    ALARM_NAIVE_TH, \
+    ALARM_NAIVE_TH, LEN_SEQ_NAIVE_BG, ALARM_NAIVE_BG_LR, \
     ALARM_LOW_NEG_SCORE_WEIGHT, update_svm_label_file
 
 
@@ -35,6 +35,7 @@ class SensorDB:
         self.alarm_record = list()
         self.alarm_record_last_pos = -1
         self.anchor_val = 0
+        self.forward_bg_val = -1
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
                cur_low_sens_score,
@@ -194,7 +195,7 @@ class SmokeDetector:
         seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
         # seq_pick = seq_forward
         # seq_pick = fft_wrapper(seq_pick)
-        res = self.svm_infer(seq_pick, suffix='_low', dir_libsvm=dir_root_svm)
+        res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
         # rectification
         seq_diff = np.diff(seq_forward)
         seq_diff_valid = seq_diff[seq_diff > 0.]
@@ -323,8 +324,16 @@ class SmokeDetector:
                 return
         for key in keys:
             sensor_db = self.db[key]
+            if sensor_db.get_seq_len() < LEN_SEQ_NAIVE_BG:
+                logging.info('background value evaluating ... ')
+                continue
             seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_NAIVE:]).astype(float)
-            if (seq_forward > ALARM_NAIVE_TH).all():
+            sensor_db.forward_bg_val = np.average(seq_forward) if sensor_db.forward_bg_val < 0 else \
+                sensor_db.forward_bg_val * (1 - ALARM_NAIVE_BG_LR) + seq_forward[-1] * ALARM_NAIVE_BG_LR
+            seq_forward_calibrate = seq_forward - sensor_db.forward_bg_val
+            sensor_db.seq_state_freq[-1] = sensor_db.forward_bg_val
+            logging.info((sensor_db.forward_bg_val, seq_forward[-1]))
+            if (seq_forward_calibrate > ALARM_NAIVE_TH).all():
                 sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     @staticmethod

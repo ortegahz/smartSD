@@ -37,7 +37,7 @@ def main():
         logging.info((j, len(paths_in), path_in))
         # db = db_gen(path_in)
         db = db_gen_v4(path_in)
-        feat_backward = np.array(db[args.key_choose_backward.lower()]).astype('float')
+        # feat_backward = np.array(db[args.key_choose_backward.lower()]).astype('float')
         # if np.max(feat_backward) < ALARM_LOW_BASE_TH:
         #     continue
         for i in range(db['seq_len_max']):

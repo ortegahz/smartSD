@@ -183,7 +183,7 @@ def db_gen_v4(path_in):
     db = dict()
     seq_len = 0
     db['fname'] = file_name
-    keys = ('voc', 'co', 'temper', 'humid', 'pm010', 'pm025', 'pm100', 'forward', 'backward')
+    keys = ('voc', 'co', 'temper', 'humid', 'pm010', 'pm025', 'pm100', 'forward_red', 'forward_blue', 'backward_red')
     for key in keys:
         db[key] = list()
 
@@ -203,8 +203,8 @@ def db_gen_v4(path_in):
         # logging.info(cur_data_lst)
         smoke_lst = smoke.split()
         # logging.info(smoke_lst)
-        forward, backward = smoke_lst[2], smoke_lst[3]
-        cur_data_lst = [voc, co, temper, humid, pm010, pm025, pm100, forward, backward]
+        forward_red, forward_blue, backward_red = smoke_lst[2], smoke_lst[3], smoke_lst[4]
+        cur_data_lst = [voc, co, temper, humid, pm010, pm025, pm100, forward_red, forward_blue, backward_red]
         # logging.info(cur_data_lst)
         for i, key in enumerate(keys):
             db[key].append(cur_data_lst[i])  # must be same order

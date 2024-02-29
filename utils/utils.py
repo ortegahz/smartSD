@@ -33,7 +33,7 @@ ALARM_LOW_CNT_TH_SVM = 5
 ALARM_LOW_CNT_DECAY = 0.1
 ALARM_LOW_NEG_SCORE_WEIGHT = 2
 ALARM_LOW_SMOOTH_TH = 1000
-DEBUG_ALARM_INDICATOR_VAL = 2 ** 10
+DEBUG_ALARM_INDICATOR_VAL = 2 ** 16
 ALARM_LOW_ANCHOR_STEP = 2
 
 
@@ -169,7 +169,7 @@ def find_key_idx(seq, th_val=10, th_cnt=10, th_delta=10):
     return key_idx if flag_valid else -1
 
 
-def make_dirs(dir_root, reset=False):
+def make_dirs(dir_root, reset=True):
     if os.path.exists(dir_root) and reset:
         shutil.rmtree(dir_root)
     os.makedirs(os.path.join(dir_root), exist_ok=True)

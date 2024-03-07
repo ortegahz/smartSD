@@ -10,6 +10,9 @@ GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
 LEN_SEQ_LOW = 16
 
+SLABY_BG_EVAL_LEN = 4
+SLABY_BG_LR = 1e-4
+
 LEN_SEQ_NAIVE_BG = 8
 LEN_SEQ_NAIVE = 8
 ALARM_NAIVE_TH = 16
@@ -80,6 +83,17 @@ def seq_pick_process_future(seq, anchor_idx):
     return seq_pick, idx_s, idx_e
 
 
+def seq_pick_process_last(seq, anchor_idx):
+    idx_s = anchor_idx - LEN_SEQ_LOW + 1 if anchor_idx - LEN_SEQ_LOW + 1 > 0 else 0
+    idx_e = len(seq) if idx_s + LEN_SEQ_LOW > len(seq) else int(idx_s + LEN_SEQ_LOW)
+    seq_pick = seq[idx_s:idx_e]
+    if len(seq_pick) < LEN_SEQ_LOW:
+        pad = [seq_pick[-1]] * (LEN_SEQ_LOW - len(seq_pick))  # pad last seq val
+        seq_pick = np.append(seq_pick, pad)
+    assert len(seq_pick) == LEN_SEQ_LOW
+    return seq_pick, idx_s, idx_e
+
+
 def find_anchor_idx_up(seq, th_sum=32, th_left=32, th_right=250):
     anchor_idx = -1
     if len(seq) < LEN_SEQ:
@@ -115,6 +129,16 @@ def find_anchor_idxes_up(seq, th_sum=32, th_left=32, th_right=250):
             i += LEN_SEQ
         else:
             i += 1
+    return anchor_idxes
+
+
+def find_anchor_idxes_v4(seq, anchor_val_th=64, aug_scale=1.0):
+    anchor_idxes = list()
+    last_anchor_idx = 0
+    for i, val in enumerate(seq):
+        if i - last_anchor_idx > LEN_SEQ_LOW / aug_scale and val > anchor_val_th:
+            anchor_idxes.append(i)
+            last_anchor_idx = i
     return anchor_idxes
 
 
@@ -213,6 +237,7 @@ def db_gen_v4(path_in):
         seq_len += 1
     db['seq_len_max'] = seq_len
     return db
+
 
 def db_gen_v3(path_in):
     keys = ['forward', 'backward']

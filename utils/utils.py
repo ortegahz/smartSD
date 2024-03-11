@@ -136,9 +136,11 @@ def find_anchor_idxes_v4(seq, anchor_val_th=64, aug_scale=1.0):
     anchor_idxes = list()
     last_anchor_idx = 0
     for i, val in enumerate(seq):
-        if i - last_anchor_idx > LEN_SEQ_LOW / aug_scale and val > anchor_val_th:
+        # if i - last_anchor_idx > LEN_SEQ_LOW / aug_scale and val > anchor_val_th:
+        #     anchor_idxes.append(i)
+        #     last_anchor_idx = i
+        if val > anchor_val_th:
             anchor_idxes.append(i)
-            last_anchor_idx = i
     return anchor_idxes
 
 

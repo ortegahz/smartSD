@@ -11,8 +11,8 @@ import serial
 from utils.utils import ALARM_CNT_TH_SVM, ALARM_LOW_CNT_DECAY, ALARM_LOW_TH, ALARM_CNT_GUARANTEE_TH, GUARANTEE_BACK_TH, \
     LEN_SEQ, LEN_SEQ_LOW, ALARM_LOW_CNT_TH_SVM, MAX_SEQ, SENSOR_ID, ALARM_GUARANTEE_SHORT_TH, MIN_SER_CHAR_NUM, \
     DEBUG_ALARM_INDICATOR_VAL, ALARM_LOW_ANCHOR_STEP, ALARM_LOW_BASE_TH, ALARM_NEG_SCORE_WEIGHT, LEN_SEQ_NAIVE, \
-    ALARM_NAIVE_TH, LEN_SEQ_NAIVE_BG, ALARM_NAIVE_BG_LR, SLABY_BG_EVAL_LEN, SLABY_BG_LR, \
-    ALARM_LOW_NEG_SCORE_WEIGHT, update_svm_label_file
+    ALARM_NAIVE_TH, LEN_SEQ_NAIVE_BG, ALARM_NAIVE_BG_LR, SMALL_LABYRINTH_SEQ_LEN, SMALL_LABYRINTH_ANCHOR_TH, \
+    ALARM_LOW_NEG_SCORE_WEIGHT, SMALL_LABYRINTH_ALARM_CNT_TH, update_svm_label_file
 
 
 class SensorDB:
@@ -324,19 +324,19 @@ class SmokeDetector:
                 return
         for key in keys:
             sensor_db = self.db[key]
-            seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_LOW:]).astype(float)
-            seq_backward = np.array(sensor_db.seq_backward[-LEN_SEQ_LOW:]).astype(float)
-            if len(seq_backward) < LEN_SEQ_LOW or seq_backward[-1] < 64:
+            seq_forward = np.array(sensor_db.seq_forward[-SMALL_LABYRINTH_SEQ_LEN:]).astype(float)
+            seq_backward = np.array(sensor_db.seq_backward[-SMALL_LABYRINTH_SEQ_LEN:]).astype(float)
+            if len(seq_backward) < SMALL_LABYRINTH_SEQ_LEN or seq_backward[-1] < SMALL_LABYRINTH_ANCHOR_TH:
                 continue
             sensor_db.alarm_logic_low_anchor_idx = sensor_db.get_seq_len() - 1
             sensor_db.seq_state[sensor_db.alarm_logic_low_anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 5
             seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
             res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
             sensor_db.seq_state_freq[-1] = res * DEBUG_ALARM_INDICATOR_VAL / 4
-            res = res * 1.0 if res < 0 else res
+            res = res * 0.5 if res < 0 else res
             sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res
             logging.info(('small labyrinth case svm calc info', res, sensor_db.cnt_alarm_svm))
-            if sensor_db.cnt_alarm_svm > ALARM_LOW_CNT_TH_SVM:
+            if sensor_db.cnt_alarm_svm > SMALL_LABYRINTH_ALARM_CNT_TH:
                 sensor_db.seq_state_freq[-1] = DEBUG_ALARM_INDICATOR_VAL
 
     def infer_db_naive(self, keys):

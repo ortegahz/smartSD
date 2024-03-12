@@ -9,11 +9,11 @@ import numpy as np
 
 from utils.utils import set_logging, make_dirs, db_gen_v3, plot_db_v3, \
     find_anchor_idxes_v4, seq_pick_process_last, update_svm_label_file, \
-    DEBUG_ALARM_INDICATOR_VAL, LEN_SEQ_LOW
+    DEBUG_ALARM_INDICATOR_VAL, SMALL_LABYRINTH_SEQ_LEN
 
 
 def update_and_plot(db, anchor_idx, seq_forward, seq_backward, subset, idx_save, args):
-    db['state'][anchor_idx - LEN_SEQ_LOW + 1:anchor_idx + 1] = DEBUG_ALARM_INDICATOR_VAL / 8
+    db['state'][anchor_idx - SMALL_LABYRINTH_SEQ_LEN + 1:anchor_idx + 1] = DEBUG_ALARM_INDICATOR_VAL / 8
     db['state'][anchor_idx] = DEBUG_ALARM_INDICATOR_VAL / 4
     seq_pick_forward, _, _ = seq_pick_process_last(seq_forward, anchor_idx)
     seq_pick_backward, _, _ = seq_pick_process_last(seq_backward, anchor_idx)

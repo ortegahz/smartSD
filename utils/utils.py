@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xlrd
 
+SMALL_LABYRINTH_SEQ_LEN = 16
+SMALL_LABYRINTH_ANCHOR_TH = 64
+SMALL_LABYRINTH_ALARM_CNT_TH = 2
+
 GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
 LEN_SEQ_LOW = 16
@@ -132,14 +136,14 @@ def find_anchor_idxes_up(seq, th_sum=32, th_left=32, th_right=250):
     return anchor_idxes
 
 
-def find_anchor_idxes_v4(seq, anchor_val_th=64, aug_scale=1.0):
+def find_anchor_idxes_v4(seq, anchor_val_th=SMALL_LABYRINTH_ANCHOR_TH, aug_scale=1.0):
     anchor_idxes = list()
     last_anchor_idx = 0
     for i, val in enumerate(seq):
-        # if i - last_anchor_idx > LEN_SEQ_LOW / aug_scale and val > anchor_val_th:
+        # if i - last_anchor_idx > SMALL_LABYRINTH_SEQ_LEN / aug_scale and val > anchor_val_th:
         #     anchor_idxes.append(i)
         #     last_anchor_idx = i
-        if val > anchor_val_th:
+        if val > anchor_val_th and len(anchor_idxes) < 8:
             anchor_idxes.append(i)
     return anchor_idxes
 
@@ -251,13 +255,16 @@ def db_gen_v3(path_in):
         lines = f.readlines()
     lines_valid = lines[1:]
     # logging.info(lines_valid)
+    for i in range(LEN_SEQ_LOW):
+        db['forward'].append(0)
+        db['backward'].append(0)
     for line in lines_valid:
         line_lst = line.split()
         # logging.info(line_lst)
         db['forward'].append(float(line_lst[0]))
         db['backward'].append(float(line_lst[1]))
     db['state'] = np.zeros_like(np.array(db['forward']).astype('float'))
-    db['seq_len'] = len(lines_valid)
+    db['seq_len'] = len(lines_valid) + LEN_SEQ_LOW
     return db
 
 

@@ -11,6 +11,7 @@ from utils.utils import set_logging, db_gen_v3, make_dirs
 def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202403/小迷宫烟枪')
+    # parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202403/小迷宫烟枪弱')
     parser.add_argument('--dir_in', default='/media/manu/data/docs/smokes/data_202403/小迷宫加湿器')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])

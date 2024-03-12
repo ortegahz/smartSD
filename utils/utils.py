@@ -8,7 +8,7 @@ import xlrd
 
 SMALL_LABYRINTH_SEQ_LEN = 16
 SMALL_LABYRINTH_ANCHOR_TH = 64
-SMALL_LABYRINTH_ALARM_CNT_TH = 2
+SMALL_LABYRINTH_ALARM_CNT_TH = 1024
 
 GUARANTEE_BACK_TH = 25000
 SENSE_LOW_BACK_TH = 20000
@@ -143,7 +143,7 @@ def find_anchor_idxes_v4(seq, anchor_val_th=SMALL_LABYRINTH_ANCHOR_TH, aug_scale
         # if i - last_anchor_idx > SMALL_LABYRINTH_SEQ_LEN / aug_scale and val > anchor_val_th:
         #     anchor_idxes.append(i)
         #     last_anchor_idx = i
-        if val > anchor_val_th and len(anchor_idxes) < 8:
+        if val > anchor_val_th and len(anchor_idxes) < 16:
             anchor_idxes.append(i)
     return anchor_idxes
 

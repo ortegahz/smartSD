@@ -412,6 +412,8 @@ class SmokeDetector:
                 second_total = int(time.time())
                 if db_key not in self.db.keys():
                     self.db[db_key] = SensorDB(second_total)
+                    for _ in range(LEN_SEQ_LOW):
+                        self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [0], [0], [0], second_total)
                 elif second_total - self.db[db_key].last_second_total > MAX_SEQ:
                     self.db.pop(db_key)
                     self.db[db_key] = SensorDB(second_total)

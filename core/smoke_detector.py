@@ -353,7 +353,7 @@ class SmokeDetector:
                 sensor_db.forward_bg_val * (1 - ALARM_NAIVE_BG_LR) + seq_forward[-1] * ALARM_NAIVE_BG_LR
             seq_forward_calibrate = seq_forward - sensor_db.forward_bg_val
             sensor_db.seq_state_freq[-1] = sensor_db.forward_bg_val
-            logging.info((sensor_db.forward_bg_val, seq_forward[-1]))
+            # logging.info((sensor_db.forward_bg_val, seq_forward[-1]))
             if (seq_forward_calibrate > ALARM_NAIVE_TH).all():
                 sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 
@@ -372,8 +372,10 @@ class SmokeDetector:
         self.db[db_key].balance()
 
     def update_db_v1(self, db, idx, key_forward, key_backward, db_key='1_1'):
-        feat_forward = np.array(db[key_forward.lower()]).astype('float')[idx]
-        feat_backward = np.array(db[key_backward.lower()]).astype('float')[idx]
+        # feat_forward = np.array(db[key_forward.lower()]).astype('float')[idx]
+        # feat_backward = np.array(db[key_backward.lower()]).astype('float')[idx]
+        feat_forward = float(db[key_forward.lower()][idx])
+        feat_backward = float(db[key_backward.lower()][idx])
 
         if db_key not in self.db.keys():
             self.db[db_key] = SensorDB()

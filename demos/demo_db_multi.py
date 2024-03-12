@@ -2,24 +2,21 @@ import argparse
 import glob
 import logging
 import os
-import sys
-
-import numpy as np
 
 from core.smoke_detector import SmokeDetector
-from utils.utils import set_logging, db_gen_v4, make_dirs, ALARM_LOW_BASE_TH
+from utils.utils import set_logging, db_gen_v4, make_dirs
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_in', default='/media/manu/data/docs/particles/sorted_v0')
+    parser.add_argument('--dir_in', default='/home/manu/tmp/particles_sorted_v1')
     parser.add_argument('--dir_root_libsvm', default='/home/manu/nfs/libsvm')
     # parser.add_argument('--key_choose_forward', default='ADC_Forward')
     # parser.add_argument('--key_choose_backward', default='ADC_Backward')
     parser.add_argument('--key_choose_forward', default='forward_red')
     parser.add_argument('--key_choose_backward', default='backward_red')
     parser.add_argument('--addrs_sensor', default=[f'1_{1}'])
-    parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results')
+    parser.add_argument('--dir_plot_save', default='/home/manu/tmp/infer_results_v1')
     parser.add_argument('--sample_pick', default=None)
     return parser.parse_args()
 
@@ -45,14 +42,12 @@ def main():
                                         args.key_choose_backward, db_key=args.addrs_sensor[0])
             # smoke_detector.infer_db(args.addrs_sensor, args.dir_root_libsvm)
             smoke_detector.infer_db_naive(args.addrs_sensor)
-            flag_save_plot = True if i == db['seq_len_max'] - 1 else False
-            title_info = os.path.basename(path_in).split('.')[0]
-            title_info = f'{j}[{len(paths_in)}]_' + title_info
-            path_plot_save = os.path.join(args.dir_plot_save, title_info)
-            cmd_exit = smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=flag_save_plot,
-                                              path_save=path_plot_save, title_info=title_info, show=False)
-            if cmd_exit:
-                sys.exit(0)
+
+        title_info = os.path.basename(path_in).split('.')[0]
+        title_info = f'{j}[{len(paths_in)}]_' + title_info
+        path_plot_save = os.path.join(args.dir_plot_save, title_info)
+        smoke_detector.plot_db(args.addrs_sensor, pause_time_s=0.001, save_plot=True, path_save=path_plot_save,
+                               title_info=title_info, show=False)
         smoke_detector.clear_db()
 
 

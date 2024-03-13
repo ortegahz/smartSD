@@ -335,7 +335,7 @@ class SmokeDetector:
             seq_pick = np.concatenate((seq_forward, seq_backward), axis=0)
             res = self.svm_infer(seq_pick, suffix='', dir_libsvm=dir_root_svm)
             sensor_db.seq_state_freq[-1] = res * DEBUG_ALARM_INDICATOR_VAL / 4
-            res = res * 0.5 if res < 0 else res
+            res = res * 1.0 if res < 0 else res
             sensor_db.cnt_alarm_svm = sensor_db.cnt_alarm_svm + res
             logging.info(('small labyrinth case svm calc info', res, sensor_db.cnt_alarm_svm))
             if sensor_db.cnt_alarm_svm > SMALL_LABYRINTH_ALARM_CNT_TH:
@@ -417,7 +417,7 @@ class SmokeDetector:
         uint16_array = struct.unpack('>' + 'H' * (len(data[4:30]) // 2), bytes(data[4:30]))
         logging.info(uint16_array)
         # pm1.0, temperature, co, h2, voc, humidity, pm2.5, pm10, forward_red, forward_blue, backward_red
-        _, _, _, _, _, humidity, _, _, forward_red, _, backward_red, _, _ = uint16_array
+        _, _, _, _, _, humidity, _, _, _, forward_red, backward_red, _, _ = uint16_array
         logging.info((humidity, forward_red, backward_red))
         db_key = '1' + '_' + str(1)
         second_total = int(time.time())

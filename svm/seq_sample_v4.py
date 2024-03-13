@@ -37,9 +37,7 @@ def run(args):
             db = db_gen_v3(path_src)
             seq_forward = np.array(db['forward']).astype(float)
             seq_backward = np.array(db['backward']).astype(float)
-            aug_scale_base = 8.0
-            aug_scale = aug_scale_base if subset == 'neg' else aug_scale_base + 0.5
-            anchor_idxes = find_anchor_idxes_v4(seq_backward, aug_scale=aug_scale)
+            anchor_idxes = find_anchor_idxes_v4(seq_backward)
             if len(anchor_idxes) < 1:
                 continue
             for anchor_idx in anchor_idxes:

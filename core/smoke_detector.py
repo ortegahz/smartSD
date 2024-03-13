@@ -1,5 +1,6 @@
 import logging
 import os
+import struct
 import sys
 import time
 from subprocess import *
@@ -36,6 +37,7 @@ class SensorDB:
         self.alarm_record_last_pos = -1
         self.anchor_val = 0
         self.forward_bg_val = -1
+        self.humidity_bg_val = -1
 
     def update(self, cur_forward, cur_backward, cur_state, cur_state_t, cur_state_f, cur_forward_amp, cur_backward_amp,
                cur_low_sens_score,
@@ -72,11 +74,11 @@ class SensorDB:
 
 
 class SmokeDetector:
-    def __init__(self, dev_ser=None):
+    def __init__(self, dev_ser=None, baud_rate=115200):
         self.db = dict()
         self.interval = 3
         if dev_ser:
-            self.ser = serial.Serial(dev_ser, 115200)
+            self.ser = serial.Serial(dev_ser, baud_rate)
             self.ser_buff = ''
             self.ser.flushInput()
 
@@ -357,6 +359,29 @@ class SmokeDetector:
             if (seq_forward_calibrate > ALARM_NAIVE_TH).all():
                 sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
 
+    def infer_db_particles(self, keys):
+        for key in keys:
+            if key not in self.db.keys():
+                return
+        for key in keys:
+            sensor_db = self.db[key]
+            if sensor_db.get_seq_len() < LEN_SEQ_NAIVE_BG:
+                logging.info('background value evaluating ... ')
+                continue
+            seq_forward = np.array(sensor_db.seq_forward[-LEN_SEQ_NAIVE:]).astype(float)
+            seq_humidity = np.array(sensor_db.seq_backward_amp[-LEN_SEQ_NAIVE:]).astype(float)
+            sensor_db.forward_bg_val = np.average(seq_forward) if sensor_db.forward_bg_val < 0 else \
+                sensor_db.forward_bg_val * (1 - ALARM_NAIVE_BG_LR) + seq_forward[-1] * ALARM_NAIVE_BG_LR
+            sensor_db.humidity_bg_val = np.average(seq_humidity) if sensor_db.humidity_bg_val < 0 else \
+                sensor_db.humidity_bg_val * (1 - ALARM_NAIVE_BG_LR) + seq_humidity[-1] * ALARM_NAIVE_BG_LR
+            seq_forward_calibrate = seq_forward - sensor_db.forward_bg_val
+            seq_humidity_calibrate = seq_humidity - sensor_db.humidity_bg_val
+            sensor_db.seq_state_freq[-1] = sensor_db.forward_bg_val
+            sensor_db.seq_state_time[-1] = sensor_db.humidity_bg_val
+            logging.info((sensor_db.forward_bg_val, seq_forward[-1], sensor_db.humidity_bg_val, seq_humidity[-1]))
+            if (seq_forward_calibrate > ALARM_NAIVE_TH).all() and (seq_humidity_calibrate < 4).all():
+                sensor_db.seq_state_time[-1] = DEBUG_ALARM_INDICATOR_VAL
+
     @staticmethod
     def value_preprocess(val, th=255, scale=1 / 32):
         val *= scale
@@ -381,6 +406,31 @@ class SmokeDetector:
             self.db[db_key] = SensorDB()
         self.db[db_key].update([feat_forward], [feat_backward], [0], [0], [0], [0], [0], [0])
         self.db[db_key].balance()
+
+    def update_db_ser_particles(self):
+        time.sleep(1)
+        cmd = b'\x01\x03\x00\x05\x00\x0D\x0E\x94'
+        self.ser.write(cmd)
+        data = self.ser.read(32)
+        if not len(data) == 32:
+            return -1
+        uint16_array = struct.unpack('>' + 'H' * (len(data[4:30]) // 2), bytes(data[4:30]))
+        logging.info(uint16_array)
+        # pm1.0, temperature, co, h2, voc, humidity, pm2.5, pm10, forward_red, forward_blue, backward_red
+        _, _, _, _, _, humidity, _, _, forward_red, _, backward_red, _, _ = uint16_array
+        logging.info((humidity, forward_red, backward_red))
+        db_key = '1' + '_' + str(1)
+        second_total = int(time.time())
+        if db_key not in self.db.keys():
+            self.db[db_key] = SensorDB(second_total)
+            for _ in range(LEN_SEQ_LOW):
+                self.db[db_key].update([forward_red], [backward_red], [0], [0], [0], [0], [humidity], [0], second_total)
+        elif second_total - self.db[db_key].last_second_total > MAX_SEQ:
+            self.db.pop(db_key)
+            self.db[db_key] = SensorDB(second_total)
+        self.db[db_key].update([forward_red], [backward_red], [0], [0], [0], [0], [humidity], [0], second_total)
+        self.db[db_key].balance()
+        return 0
 
     def update_db_ser_multi_amp(self):
         magnifications = (141.6488675, 68.47658, 37.79155058, 18.84206, 9.421031, 4.7105153, 2.355258, 1.177629,
@@ -413,7 +463,8 @@ class SmokeDetector:
                 if db_key not in self.db.keys():
                     self.db[db_key] = SensorDB(second_total)
                     for _ in range(LEN_SEQ_LOW):
-                        self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [0], [0], [0], second_total)
+                        self.db[db_key].update([val_forward], [val_backward], [0], [0], [0], [0], [0], [0],
+                                               second_total)
                 elif second_total - self.db[db_key].last_second_total > MAX_SEQ:
                     self.db.pop(db_key)
                     self.db[db_key] = SensorDB(second_total)
